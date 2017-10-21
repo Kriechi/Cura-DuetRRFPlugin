@@ -88,7 +88,6 @@ class DuetRRFOutputDevice(OutputDevice):
         self._request.setRawHeader(b'Accept', b'application/json, text/javascript')
         self._request.setRawHeader(b'Connection', b'keep-alive')
 
-        Logger.log("d", "%s %s %s" % (self._http_user, self._http_password, self._duet_password))
         if self._http_user and self._http_password:
             self._request.setRawHeader(b'Authorization', b'Basic ' + base64.b64encode("{}:{}".format(self._http_user, self._http_password).encode()))
 

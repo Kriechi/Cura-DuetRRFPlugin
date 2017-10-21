@@ -33,7 +33,6 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
     def start(self):
         manager = self.getOutputDeviceManager()
         for name, instance in self._instances.items():
-            Logger.log("d", str(instance))
             manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, instance["url"], instance["duet_password"], instance["http_user"], instance["http_password"], device_type=DuetRRFOutputDevice.DeviceType.print))
             manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, instance["url"], instance["duet_password"], instance["http_user"], instance["http_password"], device_type=DuetRRFOutputDevice.DeviceType.simulate))
             manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, instance["url"], instance["duet_password"], instance["http_user"], instance["http_password"], device_type=DuetRRFOutputDevice.DeviceType.upload))
