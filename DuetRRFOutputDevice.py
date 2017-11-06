@@ -7,8 +7,9 @@ import urllib
 import json
 
 from PyQt5 import QtNetwork
-from PyQt5.QtCore import QFile, QUrl, QCoreApplication, QByteArray, QTimer
+from PyQt5.QtCore import QFile, QUrl, QObject, QCoreApplication, QByteArray, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtQml import QQmlComponent, QQmlContext
 
 from UM.Application import Application
 from UM.Logger import Logger
@@ -101,7 +102,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._reply.finished.connect(next_stage)
         self._reply.error.connect(self._onNetworkError)
 
-    def requestWrite(self, node, fileName = None, *args, **kwargs):
+    def requestWrite(self, node, fileName=None, *args, **kwargs):
         if self._stage != OutputStage.ready:
             raise OutputDeviceError.DeviceBusyError()
 
@@ -110,6 +111,29 @@ class DuetRRFOutputDevice(OutputDevice):
         else:
             fileName = "%s.gcode" % Application.getInstance().getPrintInformation().jobName
         self._fileName = fileName
+
+        path = QUrl.fromLocalFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'UploadFilename.qml'))
+        self._component = QQmlComponent(Application.getInstance()._engine, path)
+        Logger.log("d", "Errors:", self._component.errors())
+        self._context = QQmlContext(Application.getInstance()._engine.rootContext())
+        self._context.setContextProperty("manager", self)
+        self._dialog = self._component.create(self._context)
+        self._dialog.textChanged.connect(self.onFilenameChanged)
+        self._dialog.accepted.connect(self.onFilenameAccepted)
+        self._dialog.open()
+        self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
+        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - 6)
+        self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
+
+    def onFilenameChanged(self):
+        fileName = self._dialog.findChild(QObject, "nameField").property('text')
+        self._dialog.setProperty('validName', len(fileName) > 0)
+
+    def onFilenameAccepted(self):
+        self._fileName = self._dialog.findChild(QObject, "nameField").property('text')
+        if not self._fileName.endswith('.gcode') and '.' not in self._fileName:
+            self._fileName += '.gcode'
+        Logger.log("d", "Filename set to: " + self._fileName)
 
         # create the temp file for the gcode
         self._stream = StringIO()
@@ -137,12 +161,18 @@ class DuetRRFOutputDevice(OutputDevice):
         self._send('connect', [("password", self._duet_password), self._timestamp()], self.onConnected)
 
     def onConnected(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._stream.seek(0)
         self._postData = QByteArray()
         self._postData.append(self._stream.getvalue().encode())
         self._send('upload', [("name", "0:/gcodes/" + self._fileName), self._timestamp()], self.onUploadDone, self._postData)
 
     def onUploadDone(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._stream.close()
         self.stream = None
 
@@ -169,9 +199,15 @@ class DuetRRFOutputDevice(OutputDevice):
             self._cleanupRequest()
 
     def onReadyToPrint(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._send('gcode', [("gcode", "M32 /gcodes/" + self._fileName)], self.onPrintStarted)
 
     def onPrintStarted(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         if self._device_type == DeviceType.simulate:
             self.onCheckStatus()
         else:
@@ -188,12 +224,21 @@ class DuetRRFOutputDevice(OutputDevice):
             self._cleanupRequest()
 
     def onSimulatedPrintFinished(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._send('gcode', [("gcode", "M37 S0")], self.onSimulationStopped)
 
     def onCheckStatus(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._send('status', [("type", "3")], self.onStatusReceived)
 
     def onStatusReceived(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         status_bytes = bytes(self._reply.readAll())
         Logger.log("d", status_bytes)
 
@@ -208,12 +253,21 @@ class DuetRRFOutputDevice(OutputDevice):
             self.onSimulatedPrintFinished()
 
     def onSimulationStopped(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._send('gcode', [("gcode", "M37")], self.onReporting)
 
     def onReporting(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         self._send('reply', [], self.onReported)
 
     def onReported(self):
+        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
+            return
+
         if self._message:
             self._message.hide()
 
@@ -262,8 +316,5 @@ class DuetRRFOutputDevice(OutputDevice):
         message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(errorCode, errorString))
         message.show()
 
-    def _cancelUpload(self):
-        if self._message:
-            self._message.hide()
-        self._message = None
-        self._reply.abort()
+        self.writeError.emit(self)
+        self._cleanupRequest()
