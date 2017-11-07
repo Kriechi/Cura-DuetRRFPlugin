@@ -135,6 +135,8 @@ class DuetRRFOutputDevice(OutputDevice):
             self._fileName += '.gcode'
         Logger.log("d", "Filename set to: " + self._fileName)
 
+        self._dialog.deleteLater()
+
         # create the temp file for the gcode
         self._stream = StringIO()
         self._stage = OutputStage.writing
@@ -143,6 +145,8 @@ class DuetRRFOutputDevice(OutputDevice):
         # show a progress message
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}").format(self._name), 0, False, -1)
         self._message.show()
+
+        Logger.log("d", "Loading gcode...")
 
         # send all the gcode to self._stream
         gcode = getattr(Application.getInstance().getController().getScene(), "gcode_list")
@@ -158,11 +162,11 @@ class DuetRRFOutputDevice(OutputDevice):
                 nextYield = time() + 0.05
 
         # start
+        Logger.log("d", "Connecting...")
         self._send('connect', [("password", self._duet_password), self._timestamp()], self.onConnected)
 
     def onConnected(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Connected")
 
         self._stream.seek(0)
         self._postData = QByteArray()
@@ -170,8 +174,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._send('upload', [("name", "0:/gcodes/" + self._fileName), self._timestamp()], self.onUploadDone, self._postData)
 
     def onUploadDone(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Upload done")
 
         self._stream.close()
         self.stream = None
@@ -199,14 +202,11 @@ class DuetRRFOutputDevice(OutputDevice):
             self._cleanupRequest()
 
     def onReadyToPrint(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
-
+        Logger.log("d", "Ready to print")
         self._send('gcode', [("gcode", "M32 /gcodes/" + self._fileName)], self.onPrintStarted)
 
     def onPrintStarted(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Print started")
 
         if self._device_type == DeviceType.simulate:
             self.onCheckStatus()
@@ -224,20 +224,17 @@ class DuetRRFOutputDevice(OutputDevice):
             self._cleanupRequest()
 
     def onSimulatedPrintFinished(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Simulation print finished")
 
         self._send('gcode', [("gcode", "M37 S0")], self.onSimulationStopped)
 
     def onCheckStatus(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Check status")
 
         self._send('status', [("type", "3")], self.onStatusReceived)
 
     def onStatusReceived(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Status received")
 
         status_bytes = bytes(self._reply.readAll())
         Logger.log("d", status_bytes)
@@ -253,20 +250,17 @@ class DuetRRFOutputDevice(OutputDevice):
             self.onSimulatedPrintFinished()
 
     def onSimulationStopped(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Simulation stopped")
 
         self._send('gcode', [("gcode", "M37")], self.onReporting)
 
     def onReporting(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Reporting")
 
         self._send('reply', [], self.onReported)
 
     def onReported(self):
-        if not self._reply or self._reply.error != QtNetwork.QNetworkReply.NoError:
-            return
+        Logger.log("d", "Reported")
 
         if self._message:
             self._message.hide()
