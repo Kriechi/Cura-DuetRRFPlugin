@@ -82,7 +82,9 @@ class DuetRRFOutputDevice(OutputDevice):
     def _timestamp(self):
         return ("time", datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
 
-    def _send(self, command, query, next_stage=None, data=None):
+    def _send(self, command, query=None, next_stage=None, data=None):
+        if not query:
+            query = dict()
         enc_query = urllib.parse.urlencode(query)
         self._request = QtNetwork.QNetworkRequest(QUrl(self._url + "rr_" + command + "?" + enc_query))
         self._request.setRawHeader(b'User-Agent', b'Cura Plugin DuetRRF')
@@ -99,7 +101,8 @@ class DuetRRFOutputDevice(OutputDevice):
         else:
             self._reply = self._qnam.get(self._request)
 
-        self._reply.finished.connect(next_stage)
+        if next_stage:
+            self._reply.finished.connect(next_stage)
         self._reply.error.connect(self._onNetworkError)
 
     def requestWrite(self, node, fileName=None, *args, **kwargs):
@@ -167,6 +170,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
     def onConnected(self):
         Logger.log("d", "Connected")
+        Logger.log("d", "Uploading...")
 
         self._stream.seek(0)
         self._postData = QByteArray()
@@ -180,6 +184,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self.stream = None
 
         if self._device_type == DeviceType.simulate:
+            Logger.log("d", "Simulating...")
             if self._message:
                 self._message.hide()
             text = catalog.i18nc("@info:progress", "Simulating print on {}").format(self._name)
@@ -190,6 +195,7 @@ class DuetRRFOutputDevice(OutputDevice):
         elif self._device_type == DeviceType.print:
             self.onReadyToPrint()
         elif self._device_type == DeviceType.upload:
+            self._send('disconnect')
             if self._message:
                 self._message.hide()
             text = "Uploaded file {} to {}.".format(os.path.basename(self._fileName), self._name)
@@ -211,9 +217,9 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._device_type == DeviceType.simulate:
             self.onCheckStatus()
         else:
+            self._send('disconnect')
             if self._message:
                 self._message.hide()
-
             text = "Print started on {} with file {}".format(self._name, self._fileName)
             self._message = Message(catalog.i18nc("@info:status", text))
             self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
@@ -261,6 +267,8 @@ class DuetRRFOutputDevice(OutputDevice):
 
     def onReported(self):
         Logger.log("d", "Reported")
+
+        self._send('disconnect')
 
         if self._message:
             self._message.hide()
