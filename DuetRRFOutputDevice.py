@@ -151,8 +151,12 @@ class DuetRRFOutputDevice(OutputDevice):
 
         Logger.log("d", "Loading gcode...")
 
+        # find the G-code for the active build plate to print
+        active_build_plate_id = Application.getInstance().getBuildPlateModel().activeBuildPlate
+        gcode_dict = getattr(Application.getInstance().getController().getScene(), "gcode_dict")
+        gcode = gcode_dict[active_build_plate_id]
+
         # send all the gcode to self._stream
-        gcode = getattr(Application.getInstance().getController().getScene(), "gcode_list")
         lines = len(gcode)
         nextYield = time() + 0.05
         i = 0
