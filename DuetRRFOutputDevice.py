@@ -79,6 +79,11 @@ class DuetRRFOutputDevice(OutputDevice):
         self._stream = None
         self._cleanupRequest()
 
+        if hasattr(self, '_message'):
+            self._message.hide()
+        self._message = None
+
+
     def _timestamp(self):
         return ("time", datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
 
@@ -173,6 +178,9 @@ class DuetRRFOutputDevice(OutputDevice):
         self._send('connect', [("password", self._duet_password), self._timestamp()], self.onConnected)
 
     def onConnected(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Connected")
         Logger.log("d", "Uploading...")
 
@@ -182,6 +190,9 @@ class DuetRRFOutputDevice(OutputDevice):
         self._send('upload', [("name", "0:/gcodes/" + self._fileName), self._timestamp()], self.onUploadDone, self._postData)
 
     def onUploadDone(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Upload done")
 
         self._stream.close()
@@ -212,10 +223,16 @@ class DuetRRFOutputDevice(OutputDevice):
             self._cleanupRequest()
 
     def onReadyToPrint(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Ready to print")
         self._send('gcode', [("gcode", "M32 /gcodes/" + self._fileName)], self.onPrintStarted)
 
     def onPrintStarted(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Print started")
 
         if self._device_type == DeviceType.simulate:
@@ -234,16 +251,25 @@ class DuetRRFOutputDevice(OutputDevice):
             self._cleanupRequest()
 
     def onSimulatedPrintFinished(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Simulation print finished")
 
         self._send('gcode', [("gcode", "M37 S0")], self.onSimulationStopped)
 
     def onCheckStatus(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Check status")
 
         self._send('status', [("type", "3")], self.onStatusReceived)
 
     def onStatusReceived(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Status received")
 
         status_bytes = bytes(self._reply.readAll())
@@ -260,16 +286,25 @@ class DuetRRFOutputDevice(OutputDevice):
             self.onSimulatedPrintFinished()
 
     def onSimulationStopped(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Simulation stopped")
 
         self._send('gcode', [("gcode", "M37")], self.onReporting)
 
     def onReporting(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Reporting")
 
         self._send('reply', [], self.onReported)
 
     def onReported(self):
+        if self._stage != OutputStage.writing:
+            return
+
         Logger.log("d", "Reported")
 
         self._send('disconnect')
