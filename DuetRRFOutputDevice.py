@@ -339,6 +339,9 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onMessageActionTriggered(self, message, action):
         if action == "open_browser":
             QDesktopServices.openUrl(QUrl(self._url))
+            if self._message:
+                self._message.hide()
+            self._message = None
 
     def _onUploadProgress(self, bytesSent, bytesTotal):
         if bytesTotal > 0:
