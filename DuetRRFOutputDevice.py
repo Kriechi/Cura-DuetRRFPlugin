@@ -276,8 +276,10 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", status_bytes)
 
         status = json.loads(status_bytes.decode())
-        if status["status"] == "P":
-            # still printing
+        if status["status"] in ['P', 'M'] :
+            # still simulating
+            # RRF 1.21RC2 and earlier used P while simulating
+            # RRF 1.21RC3 and later uses M while simulating
             if self._message and "fractionPrinted" in status:
                 self._message.setProgress(float(status["fractionPrinted"]))
             QTimer.singleShot(1000, self.onCheckStatus)
