@@ -6,10 +6,10 @@ Plugin for Cura 3 that adds output devices for a Duet RepRapFirmware printer: "P
 With Cura not running, unpack the zip file from the [release](https://github.com/Kriechi/Cura-DuetRRFPlugin/releases/latest) to this specific folder:
 
 ### Windows
-C:\\Users\\[YourLoginNameHere]\\AppData\\Local\\cura\\plugins\\Cura-DuetRRFPlugin
+`C:\Users\<username>\AppData\Roaming\cura\3.2\plugins\Cura-DuetRRFPlugin`
 
 ### Mac
-~/Library/Application Support/Cura/plugins/Cura-DuetRRFPlugin
+`~/Library/Application Support/Cura/3.2/plugins/Cura-DuetRRFPlugin`
 
 ### Linux
 /home/[YOUR_USERNAME]/.local/share/cura/plugins/Cura-DuetRRFPlugin
