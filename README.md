@@ -12,7 +12,7 @@ With Cura not running, unpack the zip file from the [release](https://github.com
 `~/Library/Application Support/Cura/3.2/plugins/Cura-DuetRRFPlugin`
 
 ### Linux
-/home/[YOUR_USERNAME]/.local/share/cura/plugins/Cura-DuetRRFPlugin
+`/home/<username>/.local/share/cura/plugins/Cura-DuetRRFPlugin`
 
 Be careful, the unzipper often tacks on the name of the zip as a folder at the
 bottom and you don't want it nested.  You want the files to show up in that
@@ -24,18 +24,31 @@ update in the future. Use git to clone this repository into the folders given
 above.
 
 ## Configuration
-Boot up Cura, choose the following from the Menu Bar:
-Extensions->DuetRRF->DuetRRF Connections.  Click "Add" and tell it the url to
-your DuetRRF instance (i.e. http://printer.local). You can specify a password
-(if you used `M551`, otherwise the default `reprap` is used). This plugin also
-support HTTP-Basic-Auth.
+
+* Start Cura
+* From the menu bar choose: Extensions -> DuetRRF -> DuetRRF Connections
+* Click "Add"
+* Enter the name of your printer
+* Enter the URL to your DuetRRF instance, e.g., http://printer.local or http://192.168.1.42
+* Leave "HTTP Basic Auth" empty if you don't run a reverse-proxy
+* Click "Ok"
+* Done! Look at the bottom right - there should be the big blue button with you printer name on it!
+
+## Features
+
+* Upload / Simulate / Print
+* Works with HTTP and HTTPS connections and URLS
+* Works with HTTP Basic Auth (optional)
+* Works with RRF passwords (if you used `M551`, default is `reprap`)
+* No support for UNC paths as URL
+
 
 ## Use
 After you load up a model and it has sliced, click the down arrow button on the
-"Print to <PrinterName>" button on the lower right hand corner. It will upload
+"Print to (PrinterName)" button on the lower right hand corner. It will upload
 the gcode file to the SD card and start printing it. You can select "Simulate
-on <PrinterName>" to upload and simulate the print, which returns the simulated
-print time an the actual printer. Or you can just "Upload to <PrinterName>" to
+on (PrinterName)" to upload and simulate the print, which returns the simulated
+print time an the actual printer. Or you can just "Upload to (PrinterName)" to
 copy the gcode to the SD card.
 
 ## License
