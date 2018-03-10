@@ -12,7 +12,7 @@ With Cura not running, unpack the zip file from the [release](https://github.com
 `~/Library/Application Support/Cura/3.2/plugins/Cura-DuetRRFPlugin`
 
 ### Linux
-`/home/<username>/.local/share/cura/plugins/Cura-DuetRRFPlugin`
+`/home/<username>/.local/share/cura/3.2/plugins/Cura-DuetRRFPlugin`
 
 Be careful, the unzipper often tacks on the name of the zip as a folder at the
 bottom and you don't want it nested.  You want the files to show up in that
