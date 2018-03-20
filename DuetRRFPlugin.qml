@@ -13,10 +13,8 @@ UM.Dialog
     id: dialog;
 
     title: catalog.i18nc("@title:window", "DuetRRF Servers");
-    width: 450 * Screen.devicePixelRatio;
-    height: 150 * Screen.devicePixelRatio;
-    minimumWidth: 300 * Screen.devicePixelRatio;
-    minimumHeight: 200 * Screen.devicePixelRatio;
+    width: 650 * Screen.devicePixelRatio;
+    height: 300 * Screen.devicePixelRatio;
 
     property string currentName: (instanceList.currentIndex != -1 ? instanceList.currentItem.name : "");
     property int defaultVerticalMargin: UM.Theme.getSize("default_margin").height;
@@ -34,13 +32,14 @@ UM.Dialog
             iconName: "list-add";
             onClicked: {
                 instanceDialog.oldName = "";
-                instanceDialog.name = "DuetRRF";
-                instanceDialog.url = "http://printer.local";
-                instanceDialog.duet_password = "reprap";
+                instanceDialog.name = "My Printer";
+                instanceDialog.url = "http://192.168.1.42";
+                instanceDialog.duet_password = "";
                 instanceDialog.http_user = "";
                 instanceDialog.http_password = "";
                 instanceDialog.open();
                 nameField.textChanged();
+                urlField.textChanged();
             }
         }
         Button {
@@ -177,10 +176,11 @@ UM.Dialog
             property alias http_password: http_passwordField.text;
 
             property bool validName: true;
+            property bool validUrl: true;
             property real inputWidth: UM.Theme.getSize("standard_list_input").width * 1.5;
 
-            width: 210 * Screen.devicePixelRatio;
-            height: 200 * Screen.devicePixelRatio;
+            width: 420 * Screen.devicePixelRatio;
+            height: 350 * Screen.devicePixelRatio;
 
             onAccepted: {
                 manager.saveInstance(oldName, nameField.text, urlField.text, duet_passwordField.text, http_userField.text, http_passwordField.text);
@@ -211,12 +211,15 @@ UM.Dialog
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
-                Label { text: catalog.i18nc("@label", "Server Address (url)"); }
+                Label { text: catalog.i18nc("@label", "Server Address (URL)"); }
                 TextField {
                     id: urlField;
                     text: "";
                     implicitWidth: instanceDialog.inputWidth;
                     maximumLength: 1024;
+                    onTextChanged: {
+                        instanceDialog.validUrl = manager.validUrl(instanceDialog.oldName, urlField.text);
+                    }
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
@@ -251,6 +254,11 @@ UM.Dialog
                     visible: !instanceDialog.validName;
                     text: catalog.i18nc("@error", "That instance name already exists.");
                 }
+                Item { width: parent.width; height: displayNameLabel.height; }
+                Label {
+                    visible: !instanceDialog.validUrl;
+                    text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.42");
+                }
             }
 
             rightButtons: [
@@ -262,7 +270,7 @@ UM.Dialog
                     id: okButton;
                     text: catalog.i18nc("@action:button", "Ok");
                     onClicked: instanceDialog.accept();
-                    enabled: instanceDialog.validName;
+                    enabled: instanceDialog.validName && instanceDialog.validUrl;
                     isDefault: true;
                 }
             ]

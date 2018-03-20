@@ -66,9 +66,8 @@ class DuetRRFOutputDevice(OutputDevice):
         self._stage = OutputStage.ready
         self._name = name
 
-        if not url.endswith('/'):
-            url += '/'
         self._url = url
+        Logger.log("d", "URL set to: " + self._url)
 
         self._duet_password = duet_password
         self._http_user = http_user

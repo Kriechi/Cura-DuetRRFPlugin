@@ -1,3 +1,4 @@
+import re
 import os.path
 import json
 
@@ -97,9 +98,7 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
     def saveInstance(self, oldName, name, url, duet_password, http_user, http_password):
         manager = self.getOutputDeviceManager()
         if oldName and oldName != name:
-            manager.removeOutputDevice(oldName)
-            if oldName in self._instances:
-                del self._instances[oldName]
+            self.removeInstance(name)
         self._instances[name] = {
             "url": url,
             "duet_password": duet_password,
@@ -123,12 +122,26 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
 
     @pyqtSlot(str, str, result = bool)
     def validName(self, oldName, newName):
-        # empty string isn't allowed
         if not newName:
+            # empty string isn't allowed
             return False
-        # if name hasn't changed, not a duplicate, just no rename
         if oldName == newName:
+            # if name hasn't changed, not a duplicate, just no rename
             return True
 
         # duplicates not allowed
         return (not newName in self._instances.keys())
+
+    @pyqtSlot(str, str, result = bool)
+    def validUrl(self, oldName, newUrl):
+        if newUrl.startswith('\\\\'):
+            # no UNC paths
+            return False
+        if not re.match('^https?://.', newUrl):
+            # missing https?://
+            return False
+        if '@' in newUrl:
+            # @ is probably HTTP basic auth, which is a separate setting
+            return False
+
+        return True
