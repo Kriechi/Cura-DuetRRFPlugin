@@ -99,6 +99,8 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
         manager = self.getOutputDeviceManager()
         if oldName and oldName != name:
             self.removeInstance(name)
+        if not url.endswith('/'):
+            url += '/'
         self._instances[name] = {
             "url": url,
             "duet_password": duet_password,

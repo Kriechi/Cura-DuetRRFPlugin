@@ -29,10 +29,20 @@ above.
 * From the menu bar choose: Extensions -> DuetRRF -> DuetRRF Connections
 * Click "Add"
 * Enter the name of your printer
-* Enter the URL to your DuetRRF instance, e.g., http://printer.local or http://192.168.1.42
-* Leave "HTTP Basic Auth" empty if you don't run a reverse-proxy
+  - e.g., `MyBigBox`
+* Enter the URL to your DuetWifi/DuetEthernet board
+  - make sure this URL works if you copy & paste it into your browser
+  - if you browse to that URL, you should see the DuetWebControl (DWC)
+  - e.g., `http://printer.local/` or `http://192.168.1.42/`
+* If you used `M551` in your `config.g`, enter the password
+  - e.g., `my_little!secret` or the default `reprap`
+* If you use a reverse proxy to add *HTTP Basic Auth*, enter the credentials
+  - if you don't know what *HTTP Basic Auth* is, leave these fields empty
+  - e.g., username: `alice`, password: `ecila`
 * Click "Ok"
-* Done! Look at the bottom right - there should be the big blue button with you printer name on it!
+* Done!
+
+Look at the bottom right - there should be the big blue button with you printer name on it!
 
 ## Features
 
@@ -40,7 +50,7 @@ above.
 * Works with HTTP and HTTPS connections and URLS
 * Works with HTTP Basic Auth (optional)
 * Works with RRF passwords (if you used `M551`, default is `reprap`)
-* No support for UNC paths as URL
+* No support for UNC paths, only IP addresses or resolvable domain names (DNS)
 
 
 ## Use

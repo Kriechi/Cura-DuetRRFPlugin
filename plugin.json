@@ -2,6 +2,6 @@
     "name": "DuetRRF",
     "author": "Thomas Kriechbaumer",
     "description": "Provides direct upload of gcode to DuetRRF.",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "api": 4
 }

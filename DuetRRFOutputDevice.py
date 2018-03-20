@@ -33,15 +33,7 @@ class DeviceType(Enum):
 
 
 class DuetRRFOutputDevice(OutputDevice):
-    def __init__(
-            self,
-            name="DuetRRF",
-            url="http://printer.local",
-            duet_password="reprap",
-            http_user=None,
-            http_password=None,
-            device_type=DeviceType.print
-    ):
+    def __init__(self, name, url, duet_password, http_user, http_password, device_type):
         self._device_type = device_type
         if device_type == DeviceType.print:
             description = catalog.i18nc("@action:button", "Print on {0}").format(name)

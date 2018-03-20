@@ -257,7 +257,7 @@ UM.Dialog
                 Item { width: parent.width; height: displayNameLabel.height; }
                 Label {
                     visible: !instanceDialog.validUrl;
-                    text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.42");
+                    text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.42/");
                 }
             }
 
