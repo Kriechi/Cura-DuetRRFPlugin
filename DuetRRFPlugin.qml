@@ -13,8 +13,8 @@ UM.Dialog
     id: dialog;
 
     title: catalog.i18nc("@title:window", "DuetRRF Servers");
-    width: 650 * Screen.devicePixelRatio;
-    height: 300 * Screen.devicePixelRatio;
+    width: 650;
+    height: 300;
 
     property string currentName: (instanceList.currentIndex != -1 ? instanceList.currentItem.name : "");
     property int defaultVerticalMargin: UM.Theme.getSize("default_margin").height;
@@ -179,8 +179,8 @@ UM.Dialog
             property bool validUrl: true;
             property real inputWidth: UM.Theme.getSize("standard_list_input").width * 1.5;
 
-            width: 420 * Screen.devicePixelRatio;
-            height: 350 * Screen.devicePixelRatio;
+            width: 420;
+            height: 350;
 
             onAccepted: {
                 manager.saveInstance(oldName, nameField.text, urlField.text, duet_passwordField.text, http_userField.text, http_passwordField.text);

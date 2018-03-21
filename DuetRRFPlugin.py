@@ -112,6 +112,7 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
         manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, url, duet_password, http_user, http_password, device_type=DuetRRFOutputDevice.DeviceType.upload))
         Preferences.getInstance().setValue("duetrrf/instances", json.dumps(self._instances))
         self.serverListChanged.emit()
+        Logger.log("d", "Instance saved: " + name)
 
     @pyqtSlot(str)
     def removeInstance(self, name):
@@ -121,6 +122,7 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
         del self._instances[name]
         Preferences.getInstance().setValue("duetrrf/instances", json.dumps(self._instances))
         self.serverListChanged.emit()
+        Logger.log("d", "Instance removed: " + name)
 
     @pyqtSlot(str, str, result = bool)
     def validName(self, oldName, newName):

@@ -57,13 +57,18 @@ class DuetRRFOutputDevice(OutputDevice):
 
         self._stage = OutputStage.ready
         self._name = name
-
+        self._name_id = name_id
+        self._device_type = device_type
         self._url = url
-        Logger.log("d", "URL set to: " + self._url)
-
         self._duet_password = duet_password
         self._http_user = http_user
         self._http_password = http_password
+
+        Logger.log("d", self._name_id + " | New DuetRRFOutputDevice created")
+        Logger.log("d", self._name_id + " | URL: " + self._url)
+        Logger.log("d", self._name_id + " | Duet password: " + ("set." if self._duet_password else "empty."))
+        Logger.log("d", self._name_id + " | HTTP Basic Auth user: " + ("set." if self._http_user else "empty."))
+        Logger.log("d", self._name_id + " | HTTP Basic Auth password: " + ("set." if self._http_password else "empty."))
 
         self._qnam = QtNetwork.QNetworkAccessManager()
 
@@ -113,7 +118,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
         path = QUrl.fromLocalFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'UploadFilename.qml'))
         self._component = QQmlComponent(Application.getInstance()._engine, path)
-        Logger.log("d", "Errors:", self._component.errors())
+        Logger.log("d", self._name_id + " | Errors:", self._component.errors())
         self._context = QQmlContext(Application.getInstance()._engine.rootContext())
         self._context.setContextProperty("manager", self)
         self._dialog = self._component.create(self._context)
@@ -132,7 +137,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._fileName = self._dialog.findChild(QObject, "nameField").property('text')
         if not self._fileName.endswith('.gcode') and '.' not in self._fileName:
             self._fileName += '.gcode'
-        Logger.log("d", "Filename set to: " + self._fileName)
+        Logger.log("d", self._name_id + " | Filename set to: " + self._fileName)
 
         self._dialog.deleteLater()
 
@@ -145,7 +150,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}").format(self._name), 0, False, -1)
         self._message.show()
 
-        Logger.log("d", "Loading gcode...")
+        Logger.log("d", self._name_id + " | Loading gcode...")
 
         # find the G-code for the active build plate to print
         active_build_plate_id = Application.getInstance().getBuildPlateModel().activeBuildPlate
@@ -165,15 +170,15 @@ class DuetRRFOutputDevice(OutputDevice):
                 nextYield = time() + 0.05
 
         # start
-        Logger.log("d", "Connecting...")
+        Logger.log("d", self._name_id + " | Connecting...")
         self._send('connect', [("password", self._duet_password), self._timestamp()], self.onConnected)
 
     def onConnected(self):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Connected")
-        Logger.log("d", "Uploading...")
+        Logger.log("d", self._name_id + " | Connected")
+        Logger.log("d", self._name_id + " | Uploading...")
 
         self._stream.seek(0)
         self._postData = QByteArray()
@@ -184,13 +189,13 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Upload done")
+        Logger.log("d", self._name_id + " | Upload done")
 
         self._stream.close()
         self.stream = None
 
         if self._device_type == DeviceType.simulate:
-            Logger.log("d", "Simulating...")
+            Logger.log("d", self._name_id + " | Simulating...")
             if self._message:
                 self._message.hide()
             text = catalog.i18nc("@info:progress", "Simulating print on {}").format(self._name)
@@ -217,14 +222,14 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Ready to print")
+        Logger.log("d", self._name_id + " | Ready to print")
         self._send('gcode', [("gcode", "M32 /gcodes/" + self._fileName)], self.onPrintStarted)
 
     def onPrintStarted(self):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Print started")
+        Logger.log("d", self._name_id + " | Print started")
 
         if self._device_type == DeviceType.simulate:
             self.onCheckStatus()
@@ -245,7 +250,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Simulation print finished")
+        Logger.log("d", self._name_id + " | Simulation print finished")
 
         self._send('gcode', [("gcode", "M37 S0")], self.onSimulationStopped)
 
@@ -253,7 +258,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Check status")
+        Logger.log("d", self._name_id + " | Check status")
 
         self._send('status', [("type", "3")], self.onStatusReceived)
 
@@ -261,10 +266,10 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Status received")
+        Logger.log("d", self._name_id + " | Status received")
 
         status_bytes = bytes(self._reply.readAll())
-        Logger.log("d", status_bytes)
+        Logger.log("d", self._name_id + status_bytes)
 
         status = json.loads(status_bytes.decode())
         if status["status"] in ['P', 'M'] :
@@ -282,7 +287,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Simulation stopped")
+        Logger.log("d", self._name_id + " | Simulation stopped")
 
         self._send('gcode', [("gcode", "M37")], self.onReporting)
 
@@ -290,7 +295,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Reporting")
+        Logger.log("d", self._name_id + " | Reporting")
 
         self._send('reply', [], self.onReported)
 
@@ -298,7 +303,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", "Reported")
+        Logger.log("d", self._name_id + " | Reported")
 
         self._send('disconnect')
 
