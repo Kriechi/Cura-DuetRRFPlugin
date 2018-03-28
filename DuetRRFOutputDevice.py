@@ -153,12 +153,26 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", self._name_id + " | Loading gcode...")
 
         # find the G-code for the active build plate to print
-        active_build_plate_id = Application.getInstance().getBuildPlateModel().activeBuildPlate
-        gcode_dict = getattr(Application.getInstance().getController().getScene(), "gcode_dict")
-        gcode = gcode_dict[active_build_plate_id]
+        version = Application.getInstance().getVersion()
+        Logger.log("d", "Found Cura %s" % version)
+        if version.startswith('3.0') or version.startswith('3.1'):
+            # Cura 3.0 and 3.1
+            gcode = getattr(Application.getInstance().getController().getScene(), "gcode_list")
+        else:
+            if version.startswith('3.2'):
+                # Cura 3.2
+                active_build_plate_id = Application.getInstance().getBuildPlateModel().activeBuildPlate
+            else:
+                # Cura 3.3 and later
+                active_build_plate_id = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
+
+            gcode_dict = getattr(Application.getInstance().getController().getScene(), "gcode_dict")
+            gcode = gcode_dict[active_build_plate_id]
+
+        lines = len(gcode)
+        Logger.log("d", "Found %s lines of gcode." % lines)
 
         # send all the gcode to self._stream
-        lines = len(gcode)
         nextYield = time() + 0.05
         i = 0
         for line in gcode:
