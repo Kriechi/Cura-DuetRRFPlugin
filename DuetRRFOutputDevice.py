@@ -226,8 +226,7 @@ class DuetRRFOutputDevice(OutputDevice):
             Logger.log("d", self._name_id + " | Simulating...")
             if self._message:
                 self._message.hide()
-            text = catalog.i18nc("@info:progress", "Simulating print on {}").format(self._name)
-            self._message = Message(text, 0, False, -1)
+            self._message = Message(catalog.i18nc("@info:progress", "Simulating print on {}").format(self._name), 0, False, -1)
             self._message.show()
 
             self._send('gcode', [("gcode", "M37 S1")], self.onReadyToPrint)
@@ -238,7 +237,7 @@ class DuetRRFOutputDevice(OutputDevice):
             if self._message:
                 self._message.hide()
             text = "Uploaded file {} to {}.".format(os.path.basename(self._fileName), self._name)
-            self._message = Message(catalog.i18nc("@info:status", text), 0, False, -1)
+            self._message = Message(catalog.i18nc("@info:status", text), 0, False)
             self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
             self._message.actionTriggered.connect(self._onMessageActionTriggered)
             self._message.show()
@@ -266,7 +265,7 @@ class DuetRRFOutputDevice(OutputDevice):
             if self._message:
                 self._message.hide()
             text = "Print started on {} with file {}".format(self._name, self._fileName)
-            self._message = Message(catalog.i18nc("@info:status", text), 0, False, -1)
+            self._message = Message(catalog.i18nc("@info:status", text), 0, False)
             self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
             self._message.actionTriggered.connect(self._onMessageActionTriggered)
             self._message.show()
@@ -336,7 +335,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.hide()
 
         text = "Simulation performed on {} with file {}:\n\n{}".format(self._name, self._fileName, reply_body)
-        self._message = Message(catalog.i18nc("@info:status", text), 0, False, -1)
+        self._message = Message(catalog.i18nc("@info:status", text), 0, False)
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
         self._message.show()
@@ -380,7 +379,7 @@ class DuetRRFOutputDevice(OutputDevice):
             errorString = self._reply.errorString()
         else:
             errorString = ''
-        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(errorCode, errorString), 0, False, -1)
+        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(errorCode, errorString), 0, False)
         message.show()
 
         self.writeError.emit(self)
