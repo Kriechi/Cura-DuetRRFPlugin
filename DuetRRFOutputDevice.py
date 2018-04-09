@@ -226,7 +226,7 @@ class DuetRRFOutputDevice(OutputDevice):
             Logger.log("d", self._name_id + " | Simulating...")
             if self._message:
                 self._message.hide()
-            self._message = Message(catalog.i18nc("@info:progress", "Simulating print on {}...\nDO NOT INTERACT WITH DWC OR THE PRINTER!").format(self._name), 0, False, -1)
+            self._message = Message(catalog.i18nc("@info:progress", "Simulating print on {}...\nPLEASE CLOSE DWC AND DO NOT INTERACT WITH THE PRINTER!").format(self._name), 0, False, -1)
             self._message.show()
 
             self._send('gcode', [("gcode", 'M37 P"0:/gcodes/' + self._fileName + '"')], self.onSimulationPrintStarted)
