@@ -1,10 +1,11 @@
 import os.path
-from io import StringIO
-from time import time, sleep
 import datetime
 import base64
 import urllib
 import json
+from io import StringIO
+from time import time, sleep
+from typing import cast
 
 from PyQt5 import QtNetwork
 from PyQt5.QtCore import QFile, QUrl, QObject, QCoreApplication, QByteArray, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
@@ -14,6 +15,8 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext
 from UM.Application import Application
 from UM.Logger import Logger
 from UM.Message import Message
+from UM.Mesh.MeshWriter import MeshWriter
+from UM.PluginRegistry import PluginRegistry
 from UM.OutputDevice.OutputDevice import OutputDevice
 from UM.OutputDevice import OutputDeviceError
 
@@ -152,36 +155,13 @@ class DuetRRFOutputDevice(OutputDevice):
 
         Logger.log("d", self._name_id + " | Loading gcode...")
 
-        # find the G-code for the active build plate to print
-        version = Application.getInstance().getVersion()
-        Logger.log("d", "Found Cura %s" % version)
-        if version.startswith('3.0') or version.startswith('3.1'):
-            # Cura 3.0 and 3.1
-            gcode = getattr(Application.getInstance().getController().getScene(), "gcode_list")
-        else:
-            if version.startswith('3.2'):
-                # Cura 3.2
-                active_build_plate_id = Application.getInstance().getBuildPlateModel().activeBuildPlate
-            else:
-                # Cura 3.3 and later
-                active_build_plate_id = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
-
-            gcode_dict = getattr(Application.getInstance().getController().getScene(), "gcode_dict")
-            gcode = gcode_dict[active_build_plate_id]
-
-        lines = len(gcode)
-        Logger.log("d", "Found %s lines of gcode." % lines)
-
-        # send all the gcode to self._stream
-        nextYield = time() + 0.05
-        i = 0
-        for line in gcode:
-            i += 1
-            self._stream.write(line)
-            if time() > nextYield:
-                self._onProgress(i / lines)
-                QCoreApplication.processEvents()
-                nextYield = time() + 0.05
+        # get the g-code through the GCodeWrite plugin
+        # this serializes the actual scene and should produce the same output as "Save to File"
+        gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
+        success = gcode_writer.write(self._stream, None)
+        if not success:
+            Logger.log("e", "GCodeWrite failed.")
+            return
 
         # start
         Logger.log("d", self._name_id + " | Connecting...")

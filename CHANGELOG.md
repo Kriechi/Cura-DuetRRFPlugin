@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v0.0.17: 2018-08-10
+  * fix missing settings at the end of the gcode file
+  * make use of the default GCodeWrite that Cura uses for "Save to File"
+
 ## v0.0.16: 2018-04-11
   * improve simulation mode
 

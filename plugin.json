@@ -1,7 +1,7 @@
 {
     "name": "DuetRRF",
     "author": "Thomas Kriechbaumer",
-    "description": "Provides direct upload of gcode to DuetRRF.",
-    "version": "0.0.16",
+    "description": "Upload and Print to DuetWifi / DuetEthernet / Duet Maestro with RepRapFirmware.",
+    "version": "0.0.17",
     "api": 4
 }
