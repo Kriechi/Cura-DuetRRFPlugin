@@ -8,7 +8,6 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext
 from UM.Message import Message
 from UM.Logger import Logger
 
-from UM.Application import Application
 from UM.Preferences import Preferences
 from UM.Extension import Extension
 from UM.PluginRegistry import PluginRegistry
@@ -17,6 +16,8 @@ from UM.OutputDevice.OutputDevicePlugin import OutputDevicePlugin
 from . import DuetRRFOutputDevice
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
+
+from cura.CuraApplication import CuraApplication
 
 
 class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
@@ -46,11 +47,8 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
             manager.removeOutputDevice(name + "-upload")
 
     def _createDialog(self, qml):
-        path = QUrl.fromLocalFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), qml))
-        self._component = QQmlComponent(Application.getInstance()._engine, path)
-        self._context = QQmlContext(Application.getInstance()._engine.rootContext())
-        self._context.setContextProperty("manager", self)
-        dialog = self._component.create(self._context)
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), qml)
+        dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
         if dialog is None:
             Logger.log("e", "QQmlComponent status %s", self._component.status())
             Logger.log("e", "QQmlComponent errorString %s", self._component.errorString())

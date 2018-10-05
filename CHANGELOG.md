@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v0.0.19: 2018-10-05
+  * fix more Cura 3.5 incompatibilities
+
 ## v0.0.18: 2018-10-05
   * fix Cura 3.5 incompatibility
   * bump API code

@@ -2,7 +2,7 @@
     "name": "DuetRRF",
     "author": "Thomas Kriechbaumer",
     "description": "Upload and Print to DuetWifi / DuetEthernet / Duet Maestro with RepRapFirmware.",
-    "version": "0.0.18",
+    "version": "0.0.19",
     "minimum_cura_version": "3.5",
     "maximum_cura_version": "3.5",
     "api": 5

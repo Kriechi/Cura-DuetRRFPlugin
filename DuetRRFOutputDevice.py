@@ -23,6 +23,8 @@ from UM.OutputDevice import OutputDeviceError
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
+from cura.CuraApplication import CuraApplication
+
 
 from enum import Enum
 class OutputStage(Enum):
@@ -119,15 +121,15 @@ class DuetRRFOutputDevice(OutputDevice):
             fileName = "%s.gcode" % Application.getInstance().getPrintInformation().jobName
         self._fileName = fileName
 
-        path = QUrl.fromLocalFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'UploadFilename.qml'))
-        self._component = QQmlComponent(Application.getInstance()._engine, path)
-        Logger.log("d", self._name_id + " | Errors:", self._component.errors())
-        self._context = QQmlContext(Application.getInstance()._engine.rootContext())
-        self._context.setContextProperty("manager", self)
-        self._dialog = self._component.create(self._context)
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'UploadFilename.qml')
+        self._dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
+        if dialog is None:
+            Logger.log("e", "QQmlComponent status %s", self._component.status())
+            Logger.log("e", "QQmlComponent errorString %s", self._component.errorString())
+            raise RuntimeError(self._component.errorString())
         self._dialog.textChanged.connect(self.onFilenameChanged)
         self._dialog.accepted.connect(self.onFilenameAccepted)
-        self._dialog.open()
+        self._dialog.show()
         self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
         self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - 6)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
@@ -256,7 +258,8 @@ class DuetRRFOutputDevice(OutputDevice):
 
         Logger.log("d", self._name_id + " | Simulation print started for file " + self._fileName)
 
-        self.onCheckStatus()
+        # give it some to start the simulation
+        QTimer.singleShot(15000, self.onCheckStatus)
 
     def onCheckStatus(self):
         if self._stage != OutputStage.writing:
