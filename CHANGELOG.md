@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v0.0.18: 2018-10-05
+  * fix Cura 3.5 incompatibility
+  * bump API code
+
 ## v0.0.17: 2018-08-10
   * fix missing settings at the end of the gcode file
   * make use of the default GCodeWrite that Cura uses for "Save to File"
