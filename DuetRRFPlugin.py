@@ -49,10 +49,6 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
     def _createDialog(self, qml):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), qml)
         dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
-        if dialog is None:
-            Logger.log("e", "QQmlComponent status %s", self._component.status())
-            Logger.log("e", "QQmlComponent errorString %s", self._component.errorString())
-            raise RuntimeError(self._component.errorString())
         return dialog
 
     def _showDialog(self, qml):

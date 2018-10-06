@@ -123,10 +123,6 @@ class DuetRRFOutputDevice(OutputDevice):
 
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'UploadFilename.qml')
         self._dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
-        if dialog is None:
-            Logger.log("e", "QQmlComponent status %s", self._component.status())
-            Logger.log("e", "QQmlComponent errorString %s", self._component.errorString())
-            raise RuntimeError(self._component.errorString())
         self._dialog.textChanged.connect(self.onFilenameChanged)
         self._dialog.accepted.connect(self.onFilenameAccepted)
         self._dialog.show()
