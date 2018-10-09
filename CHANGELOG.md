@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v0.0.21: 2018-XXXXX
+  * code cleanup
+  * add Duet3D icon - permission granted by Think3dPrint3d
+
 ## v0.0.20: 2018-10-06
   * fix broken dialogs
 

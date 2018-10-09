@@ -47,7 +47,7 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
             manager.removeOutputDevice(name + "-upload")
 
     def _createDialog(self, qml):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), qml)
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', qml)
         dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
         return dialog
 

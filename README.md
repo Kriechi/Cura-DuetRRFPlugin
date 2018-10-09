@@ -1,18 +1,17 @@
 # Cura-DuetRRFPlugin
-Plugin for Cura 3.4 that adds output devices for a Duet RepRapFirmware printer: "Print", "Simulate", and "Upload".
+
+Plugin for Cura 3.5 that adds output devices for a Duet RepRapFirmware printer: "Print", "Simulate", and "Upload".
 
 ## Installation
 
+**You can install this plugin via the Cura Toolbox!**
+
+Or go the manual route:
 With Cura not running, unpack the zip file from the [release](https://github.com/Kriechi/Cura-DuetRRFPlugin/releases/latest) to this specific folder:
 
-### Windows
-`C:\Users\<username>\AppData\Roaming\cura\3.4\plugins\Cura-DuetRRFPlugin`
-
-### Mac
-`~/Library/Application Support/Cura/3.4/plugins/Cura-DuetRRFPlugin`
-
-### Linux
-`/home/<username>/.local/share/cura/3.4/plugins/Cura-DuetRRFPlugin`
+  * Windows: `C:\Users\<username>\AppData\Roaming\cura\3.5\plugins\DuetRRFPlugin`
+  * macOS:`~/Library/Application Support/Cura/3.5/plugins/DuetRRFPlugin`
+  * Linux: `/home/<username>/.local/share/cura/3.5/plugins/DuetRRFPlugin`
 
 Be careful, the unzipper often tacks on the name of the zip as a folder at the
 bottom and you don't want it nested.  You want the files to show up in that
