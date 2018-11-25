@@ -8,7 +8,6 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext
 from UM.Message import Message
 from UM.Logger import Logger
 
-from UM.Preferences import Preferences
 from UM.Extension import Extension
 from UM.PluginRegistry import PluginRegistry
 from UM.OutputDevice.OutputDevicePlugin import OutputDevicePlugin
@@ -29,8 +28,8 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
         self._dialogs = {}
         self._dialogView = None
 
-        Preferences.getInstance().addPreference("duetrrf/instances", json.dumps({}))
-        self._instances = json.loads(Preferences.getInstance().getValue("duetrrf/instances"))
+        CuraApplication.getInstance().getPreferences().addPreference("duetrrf/instances", json.dumps({}))
+        self._instances = json.loads(CuraApplication.getInstance().getPreferences().getValue("duetrrf/instances"))
 
     def start(self):
         manager = self.getOutputDeviceManager()
@@ -90,31 +89,35 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
 
     @pyqtSlot(str, str, str, str, str, str)
     def saveInstance(self, oldName, name, url, duet_password, http_user, http_password):
-        manager = self.getOutputDeviceManager()
-        if oldName and oldName != name:
+        if oldName:
+            # this is a edit operation, delete the old instance before saving the new one
             self.removeInstance(oldName)
+
         if not url.endswith('/'):
             url += '/'
+
         self._instances[name] = {
             "url": url,
             "duet_password": duet_password,
             "http_user": http_user,
             "http_password": http_password
         }
+        manager = self.getOutputDeviceManager()
         manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, url, duet_password, http_user, http_password, device_type=DuetRRFOutputDevice.DeviceType.print))
         manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, url, duet_password, http_user, http_password, device_type=DuetRRFOutputDevice.DeviceType.simulate))
         manager.addOutputDevice(DuetRRFOutputDevice.DuetRRFOutputDevice(name, url, duet_password, http_user, http_password, device_type=DuetRRFOutputDevice.DeviceType.upload))
-        Preferences.getInstance().setValue("duetrrf/instances", json.dumps(self._instances))
+        CuraApplication.getInstance().getPreferences().setValue("duetrrf/instances", json.dumps(self._instances))
         self.serverListChanged.emit()
         Logger.log("d", "Instance saved: " + name)
 
     @pyqtSlot(str)
     def removeInstance(self, name):
-        self.getOutputDeviceManager().removeOutputDevice(name + "-print")
-        self.getOutputDeviceManager().removeOutputDevice(name + "-simulate")
-        self.getOutputDeviceManager().removeOutputDevice(name + "-upload")
+        manager = self.getOutputDeviceManager()
+        manager.removeOutputDevice(name + "-print")
+        manager.removeOutputDevice(name + "-simulate")
+        manager.removeOutputDevice(name + "-upload")
         del self._instances[name]
-        Preferences.getInstance().setValue("duetrrf/instances", json.dumps(self._instances))
+        CuraApplication.getInstance().getPreferences().setValue("duetrrf/instances", json.dumps(self._instances))
         self.serverListChanged.emit()
         Logger.log("d", "Instance removed: " + name)
 
@@ -124,7 +127,7 @@ class DuetRRFPlugin(QObject, Extension, OutputDevicePlugin):
             # empty string isn't allowed
             return False
         if oldName == newName:
-            # if name hasn't changed, not a duplicate, just no rename
+            # if name hasn't changed, it is not a duplicate
             return True
 
         # duplicates not allowed
