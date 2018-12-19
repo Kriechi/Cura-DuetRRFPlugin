@@ -163,23 +163,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
         # start
         Logger.log("d", self._name_id + " | Connecting...")
-        self._send('connect', [("password", self._duet_password), self._timestamp()], self.onConnected)
-
-    def onConnected(self):
-        if self._stage != OutputStage.writing:
-            return
-
-        Logger.log("d", self._name_id + " | Deleting file with the same name...")
-
-        self._send('delete', [("name", "0:/gcodes/" + self._fileName)], self.onBeforeUploadCleanupDone)
-
-    def onBeforeUploadCleanupDone(self):
-        if self._stage != OutputStage.writing:
-            return
-
-        Logger.log("d", self._name_id + " | Reading and discarding possible error message...")
-
-        self._send('reply', [], self.onUploadReady)
+        self._send('connect', [("password", self._duet_password), self._timestamp()], self.onUploadReady)
 
     def onUploadReady(self):
         if self._stage != OutputStage.writing:

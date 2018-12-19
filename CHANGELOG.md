@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.1: 2018-12-19
+  * do not try to delete the gcode file before uploading:
+  RRF safely handles this, https://forum.duet3d.com/topic/8194/cura-duet-reprap-firmware-integration-question
+
 ## v1.0.0: 2018-11-25
   * tested with Cura 3.6
   * add Duet3D icon - permission granted by Think3dPrint3d
