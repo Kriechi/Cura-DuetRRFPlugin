@@ -17,10 +17,8 @@ UM.Dialog
 
     title: dialogTitle;
 
-    minimumWidth: 400 * screenScaleFactor
-    minimumHeight: 120 * screenScaleFactor
-    width: minimumWidth
-    height: minimumHeight
+    minimumWidth: screenScaleFactor * 400
+    minimumHeight: screenScaleFactor * 120
 
     property variant catalog: UM.I18nCatalog { name: "uranium"; }
 

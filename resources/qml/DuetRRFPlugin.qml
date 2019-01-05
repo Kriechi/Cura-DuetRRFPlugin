@@ -1,5 +1,5 @@
-import QtQuick 2.2
-import QtQuick.Controls 1.1
+import QtQuick 2.4
+import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.1
 import QtQuick.Layouts 1.1
 import QtQuick.Dialogs 1.2
@@ -12,9 +12,10 @@ UM.Dialog
 {
     id: dialog;
 
-    title: catalog.i18nc("@title:window", "DuetRRF Servers");
-    width: 650;
-    height: 300;
+    title: catalog.i18nc("@title:window", "RepRapFirmware Printers");
+
+    minimumWidth: screenScaleFactor * 650;
+    minimumHeight: screenScaleFactor * 300;
 
     property string currentName: (instanceList.currentIndex != -1 ? instanceList.currentItem.name : "");
     property int defaultVerticalMargin: UM.Theme.getSize("default_margin").height;
@@ -177,10 +178,9 @@ UM.Dialog
 
             property bool validName: true;
             property bool validUrl: true;
-            property real inputWidth: UM.Theme.getSize("standard_list_input").width * 1.5;
 
-            width: 420;
-            height: 350;
+            minimumWidth: screenScaleFactor * 420;
+            minimumHeight: screenScaleFactor * 350;
 
             onAccepted: {
                 manager.saveInstance(oldName, nameField.text, urlField.text, duet_passwordField.text, http_userField.text, http_passwordField.text);
@@ -191,7 +191,7 @@ UM.Dialog
                 instanceList.currentIndexChanged();
             }
 
-            title: (oldName == "") ? catalog.i18nc("@window:title", "Add DuetRRF Connection") : catalog.i18nc("@window:title", "Edit DuetRRF Connection");
+            title: (oldName == "") ? catalog.i18nc("@window:title", "Add RepRapFirmware Printer") : catalog.i18nc("@window:title", "Edit RepRapFirmware Printer");
 
             Column {
                 anchors.fill: parent;
@@ -203,8 +203,11 @@ UM.Dialog
                 TextField {
                     id: nameField;
                     text: "";
-                    implicitWidth: instanceDialog.inputWidth;
                     maximumLength: 40;
+                    anchors.left: parent.left;
+                    anchors.right: parent.right;
+                    anchors.leftMargin: 16 * scaleFactor;
+                    anchors.rightMargin: 16 * scaleFactor;
                     onTextChanged: {
                         instanceDialog.validName = manager.validName(instanceDialog.oldName, nameField.text);
                     }
@@ -215,8 +218,11 @@ UM.Dialog
                 TextField {
                     id: urlField;
                     text: "";
-                    implicitWidth: instanceDialog.inputWidth;
                     maximumLength: 1024;
+                    anchors.left: parent.left;
+                    anchors.right: parent.right;
+                    anchors.leftMargin: 16 * scaleFactor;
+                    anchors.rightMargin: 16 * scaleFactor;
                     onTextChanged: {
                         instanceDialog.validUrl = manager.validUrl(instanceDialog.oldName, urlField.text);
                     }
@@ -227,8 +233,11 @@ UM.Dialog
                 TextField {
                     id: duet_passwordField;
                     text: "";
-                    implicitWidth: instanceDialog.inputWidth;
                     maximumLength: 1024;
+                    anchors.left: parent.left;
+                    anchors.right: parent.right;
+                    anchors.leftMargin: 16 * scaleFactor;
+                    anchors.rightMargin: 16 * scaleFactor;
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
@@ -236,8 +245,11 @@ UM.Dialog
                 TextField {
                     id: http_userField;
                     text: "";
-                    implicitWidth: instanceDialog.inputWidth;
                     maximumLength: 1024;
+                    anchors.left: parent.left;
+                    anchors.right: parent.right;
+                    anchors.leftMargin: 16 * scaleFactor;
+                    anchors.rightMargin: 16 * scaleFactor;
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
@@ -245,8 +257,11 @@ UM.Dialog
                 TextField {
                     id: http_passwordField;
                     text: "";
-                    implicitWidth: instanceDialog.inputWidth;
                     maximumLength: 1024;
+                    anchors.left: parent.left;
+                    anchors.right: parent.right;
+                    anchors.leftMargin: 16 * scaleFactor;
+                    anchors.rightMargin: 16 * scaleFactor;
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
