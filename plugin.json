@@ -4,6 +4,6 @@
     "description": "Upload and Print to DuetWifi / DuetEthernet / Duet Maestro with RepRapFirmware.",
     "version": "1.0.1",
     "minimum_cura_version": "3.5",
-    "maximum_cura_version": "3.6",
-    "api": 5
+    "maximum_cura_version": "4.0",
+    "api": "6.0"
 }
