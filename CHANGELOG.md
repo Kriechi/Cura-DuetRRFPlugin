@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.2: 2019-01-06
+  * fix layout issues on Cura 4.0-beta
+  * bump compatibility for Cura 4.0 / API 6.0
+
 ## v1.0.1: 2018-12-19
   * do not try to delete the gcode file before uploading:
   RRF safely handles this, https://forum.duet3d.com/topic/8194/cura-duet-reprap-firmware-integration-question

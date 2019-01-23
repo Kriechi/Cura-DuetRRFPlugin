@@ -1,6 +1,6 @@
 # Cura-DuetRRFPlugin
 
-Plugin for Cura 3.6 that adds output devices for a Duet RepRapFirmware printer: "Print", "Simulate", and "Upload".
+Plugin for Cura 3.6 that adds output devices for a RepRapFirmware printer running a DuetWifi, DuetEthernet, or Duet Maestro controller: "Print", "Simulate", and "Upload".
 
 ## Installation via Cura Marketplace
 
@@ -34,7 +34,7 @@ above.
 * Click "Add"
 * Enter the name of your printer
   - e.g., `MyBigBox`
-* Enter the URL to your DuetWifi/DuetEthernet board
+* Enter the URL to your controller board
   - make sure this URL works if you copy & paste it into your browser
   - if you browse to that URL, you should see the DuetWebControl (DWC)
   - e.g., `http://printer.local/` or `http://192.168.1.42/`
@@ -51,7 +51,7 @@ Look at the bottom right - there should be the big blue button with you printer 
 ## Features
 
 * Upload / Simulate / Print
-* Works with HTTP and HTTPS connections and URLS
+* Works with HTTP and HTTPS connections and URLs
 * Works with HTTP Basic Auth (optional)
 * Works with RRF passwords (if you used `M551`, default is `reprap`)
 * No support for UNC paths, only IP addresses or resolvable domain names (DNS)
