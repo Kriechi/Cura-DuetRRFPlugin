@@ -180,7 +180,7 @@ UM.Dialog
             property bool validUrl: true;
 
             minimumWidth: screenScaleFactor * 420;
-            minimumHeight: screenScaleFactor * 350;
+            minimumHeight: screenScaleFactor * 330;
 
             onAccepted: {
                 manager.saveInstance(oldName, nameField.text, urlField.text, duet_passwordField.text, http_userField.text, http_passwordField.text);
@@ -198,7 +198,7 @@ UM.Dialog
 
                 Label {
                     id: displayNameLabel;
-                    text: catalog.i18nc("@label", "Display Name");
+                    text: catalog.i18nc("@label", "Printer Name");
                 }
                 TextField {
                     id: nameField;
@@ -206,8 +206,6 @@ UM.Dialog
                     maximumLength: 40;
                     anchors.left: parent.left;
                     anchors.right: parent.right;
-                    anchors.leftMargin: 16 * scaleFactor;
-                    anchors.rightMargin: 16 * scaleFactor;
                     onTextChanged: {
                         instanceDialog.validName = manager.validName(instanceDialog.oldName, nameField.text);
                     }
@@ -221,47 +219,39 @@ UM.Dialog
                     maximumLength: 1024;
                     anchors.left: parent.left;
                     anchors.right: parent.right;
-                    anchors.leftMargin: 16 * scaleFactor;
-                    anchors.rightMargin: 16 * scaleFactor;
                     onTextChanged: {
                         instanceDialog.validUrl = manager.validUrl(instanceDialog.oldName, urlField.text);
                     }
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
-                Label { text: catalog.i18nc("@label", "Duet Password"); }
+                Label { text: catalog.i18nc("@label", "Duet Password (if you used M551)"); }
                 TextField {
                     id: duet_passwordField;
                     text: "";
                     maximumLength: 1024;
                     anchors.left: parent.left;
                     anchors.right: parent.right;
-                    anchors.leftMargin: 16 * scaleFactor;
-                    anchors.rightMargin: 16 * scaleFactor;
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
-                Label { text: catalog.i18nc("@label", "HTTP Basic Auth: user"); }
+                Label { text: catalog.i18nc("@label", "HTTP Basic Auth: user (if you run a reverse proxy)"); }
                 TextField {
                     id: http_userField;
                     text: "";
                     maximumLength: 1024;
                     anchors.left: parent.left;
                     anchors.right: parent.right;
-                    anchors.leftMargin: 16 * scaleFactor;
-                    anchors.rightMargin: 16 * scaleFactor;
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
-                Label { text: catalog.i18nc("@label", "HTTP Basic Auth: password"); }
+                Label { text: catalog.i18nc("@label", "HTTP Basic Auth: password (if you run a reverse proxy)"); }
                 TextField {
                     id: http_passwordField;
                     text: "";
                     maximumLength: 1024;
                     anchors.left: parent.left;
                     anchors.right: parent.right;
-                    anchors.leftMargin: 16 * scaleFactor;
-                    anchors.rightMargin: 16 * scaleFactor;
                 }
 
                 Item { width: parent.width; height: displayNameLabel.height; }
