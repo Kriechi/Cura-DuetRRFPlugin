@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.4: 2019-11-10
+  * bump compatibility for Cura 4.4 / API 7.0
+
 ## v1.0.3: 2019-02-02
   * require Cura 4.0 API compatibility
   * if you are on Cura 3.6, please install v1.0.2 of this plugin
