@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.5: 2019-11-10
+  * sanitize filename and forbid certain characters
+
 ## v1.0.4: 2019-11-10
   * bump compatibility for Cura 4.4 / API 7.0
 

@@ -39,8 +39,8 @@ UM.Dialog
             text: base.object;
             maximumLength: 100;
             onTextChanged: base.textChanged(text);
-            Keys.onReturnPressed: base.accept();
-            Keys.onEnterPressed: base.accept();
+            Keys.onReturnPressed: { if (base.validName) base.accept(); }
+            Keys.onEnterPressed: { if (base.validName) base.accept(); }
             Keys.onEscapePressed: base.reject();
         }
 

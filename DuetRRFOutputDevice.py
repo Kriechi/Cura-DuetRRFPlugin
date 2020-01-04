@@ -131,11 +131,25 @@ class DuetRRFOutputDevice(OutputDevice):
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
 
     def onFilenameChanged(self):
-        fileName = self._dialog.findChild(QObject, "nameField").property('text')
+        fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
+
+        forbidden_characters = "\"'´`<>()[]?*\,;:&%#$!"
+        for forbidden_character in forbidden_characters:
+            if forbidden_character in fileName:
+                self._dialog.setProperty('validName', False)
+                self._dialog.setProperty('validationError', 'Filename cannot contain {}'.format(forbidden_characters))
+                return
+
+        if fileName == '.' or fileName == '..':
+            self._dialog.setProperty('validName', False)
+            self._dialog.setProperty('validationError', 'Filename cannot be "." or ".."')
+            return
+
         self._dialog.setProperty('validName', len(fileName) > 0)
+        self._dialog.setProperty('validationError', 'Filename too short')
 
     def onFilenameAccepted(self):
-        self._fileName = self._dialog.findChild(QObject, "nameField").property('text')
+        self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
         if not self._fileName.endswith('.gcode') and '.' not in self._fileName:
             self._fileName += '.gcode'
         Logger.log("d", self._name_id + " | Filename set to: " + self._fileName)
