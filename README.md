@@ -1,8 +1,8 @@
 # Cura-DuetRRFPlugin
 
-Plugin for Cura 4.4 that adds output devices for a RepRapFirmware printer
-running a DuetWifi, DuetEthernet, or Duet Maestro controller: "Print",
-"Simulate", and "Upload".
+Plugin for Cura 4.5 that adds output devices for a RepRapFirmware printer
+running a Duet 2 Wifi, Duet 2 Ethernet, Duet 2 Maestro, or Duet 3 motion
+controller: "Print", "Simulate", and "Upload".
 
 ![Screenshot of the print button](/screenshots/print-button.png)
 
@@ -13,13 +13,13 @@ the DuetRRF plugin and install it!
 
 ## Manual Installation
 
-Or go the manual route: With Cura not running, unpack the zip file from the
+Or go the manual route: with Cura not running, unpack the zip file from the
 [release](https://github.com/Kriechi/Cura-DuetRRFPlugin/releases/latest) to this
 specific folder:
 
-  * Windows: `C:\Users\<username>\AppData\Roaming\cura\4.4\plugins\DuetRRFPlugin`
-  * macOS: `~/Library/Application Support/Cura/4.4/plugins/DuetRRFPlugin`
-  * Linux: `/home/<username>/.local/share/cura/4.4/plugins/DuetRRFPlugin`
+  * Windows: `C:\Users\<username>\AppData\Roaming\cura\4.5\plugins\DuetRRFPlugin`
+  * macOS: `~/Library/Application Support/Cura/4.5/plugins/DuetRRFPlugin`
+  * Linux: `/home/<username>/.local/share/cura/4.5/plugins/DuetRRFPlugin`
 
 Be careful, the unzipper often tacks on the name of the zip as a folder at the
 bottom and you don't want it nested.  You want the files to show up in that
@@ -64,7 +64,8 @@ the extension menu bar:
 * Click "Ok"
 * Done!
 
-Look at the bottom right - there should be the big blue button with you printer name on it!
+Now you can load a model and slice it. Then look at the bottom right - there
+should be the big blue button with you printer name on it!
 
 ## Features
 
@@ -77,12 +78,12 @@ Look at the bottom right - there should be the big blue button with you printer 
 
 ## Use
 
-After you load up a model and it has sliced, click the down arrow button on the
-"Print to (PrinterName)" button on the lower right hand corner. It will upload
-the gcode file to the SD card and start printing it. You can select "Simulate
-on (PrinterName)" to upload and simulate the print, which returns the simulated
-print time an the actual printer. Or you can just "Upload to (PrinterName)" to
-copy the gcode to the SD card.
+After you load up a model and it has been sliced, click the down arrow button on
+the "Print to (PrinterName)" button on the lower right hand corner. It will
+upload the gcode file to the SD card and start printing it. You can select
+"Simulate on (PrinterName)" to upload and simulate the print, which returns the
+simulated print time an the actual printer. Or you can just "Upload to
+(PrinterName)" to copy the gcode to the SD card.
 
 ## License
 

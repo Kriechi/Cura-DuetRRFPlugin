@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.6: 2020-04-04
+  * correctly encode special characters in filenames
+  * mention Duet 3 controllers
+
 ## v1.0.5: 2019-11-10
   * sanitize filename and forbid certain characters
 
