@@ -89,10 +89,15 @@ class DuetRRFOutputDevice(OutputDevice):
         return ("time", datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
 
     def _send(self, command, query=None, next_stage=None, data=None):
-        enc_query = urllib.parse.urlencode(query or dict())
+        url = "{}rr_{}".format(self._url, command)
+
+        if not query:
+            query = dict()
+        enc_query = urllib.parse.urlencode(query, quote_via=urllib.parse.quote)
         if enc_query:
-            command += '?' + enc_query
-        self._request = QtNetwork.QNetworkRequest(QUrl(self._url + "rr_" + command))
+            url += '?' + enc_query
+
+        self._request = QtNetwork.QNetworkRequest(QUrl(url))
         self._request.setRawHeader(b'User-Agent', b'Cura Plugin DuetRRF')
         self._request.setRawHeader(b'Accept', b'application/json, text/javascript')
         self._request.setRawHeader(b'Connection', b'keep-alive')
