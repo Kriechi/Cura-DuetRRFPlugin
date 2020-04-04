@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.7: 2020-04-04
+  * bump compatibility for Cura 4.5 / API 7.1
+
 ## v1.0.6: 2020-04-04
   * correctly encode special characters in filenames
   * mention Duet 3 controllers
