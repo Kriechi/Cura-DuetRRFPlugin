@@ -8,6 +8,8 @@ from time import time, sleep
 from typing import cast
 
 from PyQt5 import QtNetwork
+from PyQt5.QtNetwork import QNetworkReply
+
 from PyQt5.QtCore import QFile, QUrl, QObject, QCoreApplication, QByteArray, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtQml import QQmlComponent, QQmlContext
@@ -69,6 +71,8 @@ class DuetRRFOutputDevice(OutputDevice):
         self._http_user = http_user
         self._http_password = http_password
 
+        self._use_rrf_http_api = True # by default we try to connect to the RRF HTTP API via rr_connect
+
         Logger.log("d", self._name_id + " | New DuetRRFOutputDevice created")
         Logger.log("d", self._name_id + " | URL: " + self._url)
         Logger.log("d", self._name_id + " | Duet password: " + ("set." if self._duet_password else "empty."))
@@ -88,8 +92,8 @@ class DuetRRFOutputDevice(OutputDevice):
     def _timestamp(self):
         return ("time", datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
 
-    def _send(self, command, query=None, next_stage=None, data=None):
-        url = "{}rr_{}".format(self._url, command)
+    def _send(self, command, query=None, next_stage=None, data=None, on_error=None, method='POST'):
+        url = self._url + command
 
         if not query:
             query = dict()
@@ -107,14 +111,21 @@ class DuetRRFOutputDevice(OutputDevice):
 
         if data:
             self._request.setRawHeader(b'Content-Type', b'application/octet-stream')
-            self._reply = self._qnam.post(self._request, data)
+            if method == 'PUT':
+                self._reply = self._qnam.put(self._request, data)
+            else:
+                self._reply = self._qnam.post(self._request, data)
             self._reply.uploadProgress.connect(self._onUploadProgress)
         else:
             self._reply = self._qnam.get(self._request)
 
         if next_stage:
             self._reply.finished.connect(next_stage)
-        self._reply.error.connect(self._onNetworkError)
+
+        if on_error:
+            self._reply.error.connect(on_error)
+        else:
+            self._reply.error.connect(self._onNetworkError)
 
     def requestWrite(self, node, fileName=None, *args, **kwargs):
         if self._stage != OutputStage.ready:
@@ -182,17 +193,49 @@ class DuetRRFOutputDevice(OutputDevice):
 
         # start
         Logger.log("d", self._name_id + " | Connecting...")
-        self._send('connect', [("password", self._duet_password), self._timestamp()], self.onUploadReady)
+        self._send('rr_connect',
+            query=[("password", self._duet_password), self._timestamp()],
+            next_stage=self.onUploadReady,
+            on_error=self._check_duet3_sbc,
+        )
+
+    def _check_duet3_sbc(self, errorCode):
+        Logger.log("d", self._name_id + " | rr_connect failed with errorCode " + str(errorCode))
+        if errorCode == QNetworkReply.ContentNotFoundError:
+            Logger.log("d", self._name_id + " | errorCode indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
+            self._use_rrf_http_api = False  # let's try the newer DuetSoftwareFramework for Duet3+SBC API instead
+            self._send('machine/status',
+                next_stage=self.onUploadReady
+            )
+        else:
+            self._onNetworkError(errorCode)
 
     def onUploadReady(self):
         if self._stage != OutputStage.writing:
             return
 
         Logger.log("d", self._name_id + " | Uploading...")
+
+        if not self._stream:
+            Logger.log("d", self._name_id + " | Upload failed because stream is already None - THIS SHOULD NOT HAPPEN!")
+            return
+
         self._stream.seek(0)
         self._postData = QByteArray()
         self._postData.append(self._stream.getvalue().encode())
-        self._send('upload', [("name", "0:/gcodes/" + self._fileName), self._timestamp()], self.onUploadDone, self._postData)
+
+        if self._use_rrf_http_api:
+            self._send('rr_upload',
+                query=[("name", "0:/gcodes/" + self._fileName), self._timestamp()],
+                next_stage=self.onUploadDone,
+                data=self._postData,
+            )
+        else:
+            self._send('machine/file/gcodes/' + self._fileName,
+                next_stage=self.onUploadDone,
+                data=self._postData,
+                method='PUT',
+            )
 
     def onUploadDone(self):
         if self._stage != OutputStage.writing:
@@ -201,7 +244,7 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", self._name_id + " | Upload done")
 
         self._stream.close()
-        self.stream = None
+        self._stream = None
 
         if self._device_type == DeviceType.simulate:
             Logger.log("d", self._name_id + " | Simulating...")
@@ -210,11 +253,23 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message = Message(catalog.i18nc("@info:progress", "Simulating print on {}...\nPLEASE CLOSE DWC AND DO NOT INTERACT WITH THE PRINTER!").format(self._name), 0, False, -1)
             self._message.show()
 
-            self._send('gcode', [("gcode", 'M37 P"0:/gcodes/' + self._fileName + '"')], self.onSimulationPrintStarted)
+            gcode='M37 P"0:/gcodes/' + self._fileName + '"'
+            Logger.log("d", self._name_id + " | Sending gcode:" + gcode)
+            if self._use_rrf_http_api:
+                self._send('rr_gcode',
+                    query=[("gcode", gcode)],
+                    next_stage=self.onSimulationPrintStarted,
+                )
+            else:
+                self._send('machine/code',
+                    data=gcode.encode(),
+                    next_stage=self.onSimulationPrintStarted,
+                )
         elif self._device_type == DeviceType.print:
             self.onReadyToPrint()
         elif self._device_type == DeviceType.upload:
-            self._send('disconnect')
+            if self._use_rrf_http_api:
+                self._send('rr_disconnect')
             if self._message:
                 self._message.hide()
             text = "Uploaded file {} to {}.".format(os.path.basename(self._fileName), self._name)
@@ -231,7 +286,19 @@ class DuetRRFOutputDevice(OutputDevice):
             return
 
         Logger.log("d", self._name_id + " | Ready to print")
-        self._send('gcode', [("gcode", 'M32 "0:/gcodes/' + self._fileName + '"')], self.onPrintStarted)
+
+        gcode = 'M32 "0:/gcodes/' + self._fileName + '"'
+        Logger.log("d", self._name_id + " | Sending gcode:" + gcode)
+        if self._use_rrf_http_api:
+            self._send('rr_gcode',
+                query=[("gcode", gcode)],
+                next_stage=self.onPrintStarted,
+            )
+        else:
+            self._send('machine/code',
+                data=gcode.encode(),
+                next_stage=self.onPrintStarted,
+            )
 
     def onPrintStarted(self):
         if self._stage != OutputStage.writing:
@@ -239,7 +306,8 @@ class DuetRRFOutputDevice(OutputDevice):
 
         Logger.log("d", self._name_id + " | Print started")
 
-        self._send('disconnect')
+        if self._use_rrf_http_api:
+            self._send('rr_disconnect')
         if self._message:
             self._message.hide()
         text = "Print started on {} with file {}".format(self._name, self._fileName)
@@ -258,7 +326,7 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", self._name_id + " | Simulation print started for file " + self._fileName)
 
         # give it some to start the simulation
-        QTimer.singleShot(15000, self.onCheckStatus)
+        QTimer.singleShot(2000, self.onCheckStatus)
 
     def onCheckStatus(self):
         if self._stage != OutputStage.writing:
@@ -266,31 +334,58 @@ class DuetRRFOutputDevice(OutputDevice):
 
         Logger.log("d", self._name_id + " | Checking status...")
 
-        self._send('status', [("type", "3")], self.onStatusReceived)
+        if self._use_rrf_http_api:
+            self._send('rr_status',
+                query=[("type", "3")],
+                next_stage=self.onStatusReceived,
+            )
+        else:
+            self._send('machine/status',
+                next_stage=self.onStatusReceived,
+            )
 
     def onStatusReceived(self):
         if self._stage != OutputStage.writing:
             return
 
+        Logger.log("d", self._name_id + " | Status received - decoding...")
         reply_body = bytes(self._reply.readAll()).decode()
-        Logger.log("d", self._name_id + " | Status received | " + reply_body)
+        Logger.log("d", self._name_id + " | Status: " + reply_body)
 
         status = json.loads(reply_body)
-        if status["status"] in ['P', 'M'] :
-            # still simulating
+        if self._use_rrf_http_api:
             # RRF 1.21RC2 and earlier used P while simulating
             # RRF 1.21RC3 and later uses M while simulating
+            busy = status["status"] in ['P', 'M']
+        else:
+            busy = status["result"]["state"]["status"] == 'simulating'
+
+        if busy:
+            # still simulating
             if self._message and "fractionPrinted" in status:
                 self._message.setProgress(float(status["fractionPrinted"]))
-            QTimer.singleShot(5000, self.onCheckStatus)
+            QTimer.singleShot(1000, self.onCheckStatus)
         else:
             Logger.log("d", self._name_id + " | Simulation print finished")
-            self._send('reply', [], self.onReported)
+
+            gcode='M37'
+            Logger.log("d", self._name_id + " | Sending gcode:" + gcode)
+            if self._use_rrf_http_api:
+                self._send('rr_gcode',
+                    query=[("gcode", gcode)],
+                    next_stage=self.onReported,
+                )
+            else:
+                self._send('machine/code',
+                    data=gcode.encode(),
+                    next_stage=self.onReported,
+                )
 
     def onReported(self):
         if self._stage != OutputStage.writing:
             return
 
+        Logger.log("d", self._name_id + " | Simulation status received - decoding...")
         reply_body = bytes(self._reply.readAll()).decode().strip()
         Logger.log("d", self._name_id + " | Reported | " + reply_body)
 
@@ -303,7 +398,8 @@ class DuetRRFOutputDevice(OutputDevice):
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
         self._message.show()
 
-        self._send('disconnect')
+        if self._use_rrf_http_api:
+            self._send('rr_disconnect')
         self.writeSuccess.emit(self)
         self._cleanupRequest()
 
@@ -313,6 +409,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeProgress.emit(self, progress)
 
     def _cleanupRequest(self):
+        Logger.log("e", "_cleanupRequest called")
         self._reply = None
         self._request = None
         if self._stream:
@@ -333,6 +430,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self._onProgress(int(bytesSent * 100 / bytesTotal))
 
     def _onNetworkError(self, errorCode):
+        # https://doc.qt.io/qt-5/qnetworkreply.html#NetworkError-enum
         Logger.log("e", "_onNetworkError: %s", repr(errorCode))
         if self._message:
             self._message.hide()
