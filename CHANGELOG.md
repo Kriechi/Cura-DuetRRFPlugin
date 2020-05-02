@@ -1,6 +1,10 @@
 # Changelog of Cura-DuetRRFPlugin
 
-## v1.0.8: 2020.04.20
+## v1.0.9: 2020-05-02
+  * bump compatibility for Cura 4.6 / API 7.2
+  * fix simulation result reply for RRF HTTP API
+
+## v1.0.8: 2020-04-20
   * support new HTTP API for Duet3 with SBC running DuetSoftwareFramework
 
 ## v1.0.7: 2020-04-04
