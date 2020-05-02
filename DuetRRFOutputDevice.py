@@ -373,13 +373,24 @@ class DuetRRFOutputDevice(OutputDevice):
             if self._use_rrf_http_api:
                 self._send('rr_gcode',
                     query=[("gcode", gcode)],
-                    next_stage=self.onReported,
+                    next_stage=self.onM37Reported,
                 )
             else:
                 self._send('machine/code',
                     data=gcode.encode(),
                     next_stage=self.onReported,
                 )
+    def onM37Reported(self):
+        if self._stage != OutputStage.writing:
+            return
+
+        Logger.log("d", self._name_id + " | M37 finished - let's get it's reply...")
+        reply_body = bytes(self._reply.readAll()).decode().strip()
+        Logger.log("d", self._name_id + " | M37 gcode reply | " + reply_body)
+
+        self._send('rr_reply',
+            next_stage=self.onReported,
+        )
 
     def onReported(self):
         if self._stage != OutputStage.writing:
