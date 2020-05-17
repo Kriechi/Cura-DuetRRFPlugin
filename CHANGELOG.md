@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.10: 2020-05-XX
+  * fix Cura crashes when using Duet3 with SBC
+
 ## v1.0.9: 2020-05-02
   * bump compatibility for Cura 4.6 / API 7.2
   * fix simulation result reply for RRF HTTP API

@@ -63,6 +63,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self.setPriority(priority)
 
         self._stage = OutputStage.ready
+        self._stream = None
         self._name = name
         self._name_id = name_id
         self._device_type = device_type
@@ -79,9 +80,6 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", self._name_id + " | HTTP Basic Auth user: " + ("set." if self._http_user else "empty."))
         Logger.log("d", self._name_id + " | HTTP Basic Auth password: " + ("set." if self._http_password else "empty."))
 
-        self._qnam = QtNetwork.QNetworkAccessManager()
-
-        self._stream = None
         self._cleanupRequest()
 
         if hasattr(self, '_message'):
@@ -101,26 +99,27 @@ class DuetRRFOutputDevice(OutputDevice):
         if enc_query:
             url += '?' + enc_query
 
-        self._request = QtNetwork.QNetworkRequest(QUrl(url))
-        self._request.setRawHeader(b'User-Agent', b'Cura Plugin DuetRRF')
-        self._request.setRawHeader(b'Accept', b'application/json, text/javascript')
-        self._request.setRawHeader(b'Connection', b'keep-alive')
+        request = QtNetwork.QNetworkRequest(QUrl(url))
+        request.setRawHeader(b'User-Agent', b'Cura Plugin DuetRRF')
+        request.setRawHeader(b'Accept', b'application/json, text/javascript')
+        request.setRawHeader(b'Connection', b'keep-alive')
 
         if self._http_user and self._http_password:
-            self._request.setRawHeader(b'Authorization', b'Basic ' + base64.b64encode("{}:{}".format(self._http_user, self._http_password).encode()))
+            request.setRawHeader(b'Authorization', b'Basic ' + base64.b64encode("{}:{}".format(self._http_user, self._http_password).encode()))
+
+        self._qnam = QtNetwork.QNetworkAccessManager()
+        if next_stage:
+            self._qnam.finished.connect(next_stage)
 
         if data:
-            self._request.setRawHeader(b'Content-Type', b'application/octet-stream')
+            request.setRawHeader(b'Content-Type', b'application/octet-stream')
             if method == 'PUT':
-                self._reply = self._qnam.put(self._request, data)
+                self._reply = self._qnam.put(request, data)
             else:
-                self._reply = self._qnam.post(self._request, data)
+                self._reply = self._qnam.post(request, data)
             self._reply.uploadProgress.connect(self._onUploadProgress)
         else:
-            self._reply = self._qnam.get(self._request)
-
-        if next_stage:
-            self._reply.finished.connect(next_stage)
+            self._reply = self._qnam.get(request)
 
         if on_error:
             self._reply.error.connect(on_error)
@@ -210,15 +209,14 @@ class DuetRRFOutputDevice(OutputDevice):
         else:
             self._onNetworkError(errorCode)
 
-    def onUploadReady(self):
+    def onUploadReady(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | Uploading...")
-
-        if not self._stream:
-            Logger.log("d", self._name_id + " | Upload failed because stream is already None - THIS SHOULD NOT HAPPEN!")
-            return
 
         self._stream.seek(0)
         self._postData = QByteArray()
@@ -237,8 +235,11 @@ class DuetRRFOutputDevice(OutputDevice):
                 method='PUT',
             )
 
-    def onUploadDone(self):
+    def onUploadDone(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | Upload done")
@@ -300,8 +301,11 @@ class DuetRRFOutputDevice(OutputDevice):
                 next_stage=self.onPrintStarted,
             )
 
-    def onPrintStarted(self):
+    def onPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | Print started")
@@ -319,8 +323,11 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeSuccess.emit(self)
         self._cleanupRequest()
 
-    def onSimulationPrintStarted(self):
+    def onSimulationPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | Simulation print started for file " + self._fileName)
@@ -344,8 +351,11 @@ class DuetRRFOutputDevice(OutputDevice):
                 next_stage=self.onStatusReceived,
             )
 
-    def onStatusReceived(self):
+    def onStatusReceived(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | Status received - decoding...")
@@ -380,8 +390,11 @@ class DuetRRFOutputDevice(OutputDevice):
                     data=gcode.encode(),
                     next_stage=self.onReported,
                 )
-    def onM37Reported(self):
+    def onM37Reported(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | M37 finished - let's get it's reply...")
@@ -392,8 +405,11 @@ class DuetRRFOutputDevice(OutputDevice):
             next_stage=self.onReported,
         )
 
-    def onReported(self):
+    def onReported(self, reply):
         if self._stage != OutputStage.writing:
+            return
+        if reply.error() != QNetworkReply.NoError:
+            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", self._name_id + " | Simulation status received - decoding...")
@@ -421,8 +437,8 @@ class DuetRRFOutputDevice(OutputDevice):
 
     def _cleanupRequest(self):
         Logger.log("e", "_cleanupRequest called")
+        self._qnam = None
         self._reply = None
-        self._request = None
         if self._stream:
             self._stream.close()
         self._stream = None
