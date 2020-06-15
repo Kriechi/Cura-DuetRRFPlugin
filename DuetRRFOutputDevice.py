@@ -359,7 +359,7 @@ class DuetRRFOutputDevice(OutputDevice):
             return
 
         Logger.log("d", self._name_id + " | Status received - decoding...")
-        reply_body = bytes(self._reply.readAll()).decode()
+        reply_body = bytes(reply.readAll()).decode()
         Logger.log("d", self._name_id + " | Status: " + reply_body)
 
         status = json.loads(reply_body)
@@ -398,7 +398,7 @@ class DuetRRFOutputDevice(OutputDevice):
             return
 
         Logger.log("d", self._name_id + " | M37 finished - let's get it's reply...")
-        reply_body = bytes(self._reply.readAll()).decode().strip()
+        reply_body = bytes(reply.readAll()).decode().strip()
         Logger.log("d", self._name_id + " | M37 gcode reply | " + reply_body)
 
         self._send('rr_reply',
@@ -413,7 +413,7 @@ class DuetRRFOutputDevice(OutputDevice):
             return
 
         Logger.log("d", self._name_id + " | Simulation status received - decoding...")
-        reply_body = bytes(self._reply.readAll()).decode().strip()
+        reply_body = bytes(reply.readAll()).decode().strip()
         Logger.log("d", self._name_id + " | Reported | " + reply_body)
 
         if self._message:
@@ -438,7 +438,6 @@ class DuetRRFOutputDevice(OutputDevice):
     def _cleanupRequest(self):
         Logger.log("e", "_cleanupRequest called")
         self._qnam = None
-        self._reply = None
         if self._stream:
             self._stream.close()
         self._stream = None
