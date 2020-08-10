@@ -251,6 +251,8 @@ class DuetRRFOutputDevice(OutputDevice):
             Logger.log("d", self._name_id + " | Simulating...")
             if self._message:
                 self._message.hide()
+                self._message = None
+
             self._message = Message(catalog.i18nc("@info:progress", "Simulating print on {}...\nPLEASE CLOSE DWC AND DO NOT INTERACT WITH THE PRINTER!").format(self._name), 0, False, -1)
             self._message.show()
 
@@ -273,6 +275,8 @@ class DuetRRFOutputDevice(OutputDevice):
                 self._send('rr_disconnect')
             if self._message:
                 self._message.hide()
+                self._message = None
+
             text = "Uploaded file {} to {}.".format(os.path.basename(self._fileName), self._name)
             self._message = Message(catalog.i18nc("@info:status", text), 0, False)
             self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
@@ -314,6 +318,8 @@ class DuetRRFOutputDevice(OutputDevice):
             self._send('rr_disconnect')
         if self._message:
             self._message.hide()
+            self._message = None
+
         text = "Print started on {} with file {}".format(self._name, self._fileName)
         self._message = Message(catalog.i18nc("@info:status", text), 0, False)
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
@@ -418,6 +424,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
         if self._message:
             self._message.hide()
+            self._message = None
 
         text = "Simulation finished on {}:\n\n{}".format(self._name, reply_body)
         self._message = Message(catalog.i18nc("@info:status", text), 0, False)
@@ -436,20 +443,22 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeProgress.emit(self, progress)
 
     def _cleanupRequest(self):
-        Logger.log("e", "_cleanupRequest called")
+        Logger.log("d", "_cleanupRequest called")
+        self._reply = None
         self._qnam = None
         if self._stream:
             self._stream.close()
         self._stream = None
         self._stage = OutputStage.ready
         self._fileName = None
+        Logger.log("d", "_cleanupRequest finished")
 
     def _onMessageActionTriggered(self, message, action):
         if action == "open_browser":
             QDesktopServices.openUrl(QUrl(self._url))
             if self._message:
                 self._message.hide()
-            self._message = None
+                self._message = None
 
     def _onUploadProgress(self, bytesSent, bytesTotal):
         if bytesTotal > 0:
@@ -460,7 +469,7 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("e", "_onNetworkError: %s", repr(errorCode))
         if self._message:
             self._message.hide()
-        self._message = None
+            self._message = None
 
         if self._reply:
             errorString = self._reply.errorString()
