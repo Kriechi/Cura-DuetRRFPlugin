@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.0.11: 2020-08-29
+  * bump compatibility for Cura 4.7 / API 7.3
+  * fix Cura crashes with non-latin strings in Message boxes
+
 ## v1.0.10: 2020-07-22
   * fix Cura crashes when using Duet3 with SBC
 
