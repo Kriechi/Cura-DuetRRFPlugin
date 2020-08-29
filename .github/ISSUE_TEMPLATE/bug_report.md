@@ -26,7 +26,7 @@ A clear and concise description of what you expected to happen.
  - Cura-DuetRRFPlugin Version and Installation: [e.g. 1.0.6 installed via Marketplace, or git-master]
  - Duet RepRapFirmware Version: [e.g. 3.1.1, check with `M122`]
 
-** Cura Log**
+**Cura Log**
 Based on your Cura version, please drag&drop the log file into the issue, or copy&paste all lines with `DuetRRFPlugin`:
 Windows: C:\Users\<username>\AppData\Roaming\cura\4.6\cura.log
 macOS: ~/Library/Application Support/Cura/4.6/cura.log

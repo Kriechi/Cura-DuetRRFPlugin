@@ -6,6 +6,7 @@ import json
 from io import StringIO
 from time import time, sleep
 from typing import cast
+from enum import Enum
 
 from PyQt5 import QtNetwork
 from PyQt5.QtNetwork import QNetworkReply
@@ -14,6 +15,8 @@ from PyQt5.QtCore import QFile, QUrl, QObject, QCoreApplication, QByteArray, QTi
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtQml import QQmlComponent, QQmlContext
 
+from cura.CuraApplication import CuraApplication
+
 from UM.Application import Application
 from UM.Logger import Logger
 from UM.Message import Message
@@ -21,71 +24,68 @@ from UM.Mesh.MeshWriter import MeshWriter
 from UM.PluginRegistry import PluginRegistry
 from UM.OutputDevice.OutputDevice import OutputDevice
 from UM.OutputDevice import OutputDeviceError
-
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
-from cura.CuraApplication import CuraApplication
 
-
-from enum import Enum
 class OutputStage(Enum):
     ready = 0
     writing = 1
 
-class DeviceType(Enum):
+class DuetRRFDeviceType(Enum):
     print = 0
     simulate = 1
     upload = 2
 
 
 class DuetRRFOutputDevice(OutputDevice):
-    def __init__(self, name, url, duet_password, http_user, http_password, device_type):
+    def __init__(self, name_id, device_type):
+        self._name_id = name_id
+        super().__init__(name_id)
+
+        self._application = CuraApplication.getInstance()
+        global_container_stack = self._application.getGlobalContainerStack()
+        self._name = global_container_stack.getName()
+
         self._device_type = device_type
-        if device_type == DeviceType.print:
-            description = catalog.i18nc("@action:button", "Print on {0}").format(name)
-            name_id = name + "-print"
+        if device_type == DuetRRFDeviceType.print:
+            description = catalog.i18nc("@action:button", "Print on {0}").format(self._name)
             priority = 30
-        elif device_type == DeviceType.simulate:
-            description = catalog.i18nc("@action:button", "Simulate on {0}").format(name)
-            name_id = name + "-simulate"
+        elif device_type == DuetRRFDeviceType.simulate:
+            description = catalog.i18nc("@action:button", "Simulate on {0}").format(self._name)
             priority = 20
-        elif device_type == DeviceType.upload:
-            description = catalog.i18nc("@action:button", "Upload to {0}").format(name)
-            name_id = name + "-upload"
+        elif device_type == DuetRRFDeviceType.upload:
+            description = catalog.i18nc("@action:button", "Upload to {0}").format(self._name)
             priority = 10
         else:
             assert False
 
-        super().__init__(name_id)
         self.setShortDescription(description)
         self.setDescription(description)
         self.setPriority(priority)
 
         self._stage = OutputStage.ready
-        self._stream = None
-        self._name = name
-        self._name_id = name_id
         self._device_type = device_type
-        self._url = url
-        self._duet_password = duet_password
-        self._http_user = http_user
-        self._http_password = http_password
+        self._stream = None
+        self._message = None
+
+        self._url = global_container_stack.getMetaDataEntry("duetrrf_url", "")
+        self._duet_password = global_container_stack.getMetaDataEntry("duetrrf_duet_password", "")
+        self._http_user = global_container_stack.getMetaDataEntry("duetrrf_http_user", "")
+        self._http_password = global_container_stack.getMetaDataEntry("duetrrf_http_password", "")
 
         self._use_rrf_http_api = True # by default we try to connect to the RRF HTTP API via rr_connect
 
-        Logger.log("d", self._name_id + " | New DuetRRFOutputDevice created")
-        Logger.log("d", self._name_id + " | URL: " + self._url)
-        Logger.log("d", self._name_id + " | Duet password: " + ("set." if self._duet_password else "empty."))
-        Logger.log("d", self._name_id + " | HTTP Basic Auth user: " + ("set." if self._http_user else "empty."))
-        Logger.log("d", self._name_id + " | HTTP Basic Auth password: " + ("set." if self._http_password else "empty."))
+        Logger.log("d",
+            "New {} DuetRRFOutputDevice created | URL: {} | Duet password: {} | HTTP Basic Auth: user:{}, password:{}".format(
+            self._name_id,
+            self._url,
+            "set" if self._duet_password else "<empty>",
+            self._http_user if self._http_user else "<empty>",
+            "set" if self._http_password else "<empty>",
+        ))
 
         self._cleanupRequest()
-
-        if hasattr(self, '_message'):
-            self._message.hide()
-        self._message = None
-
 
     def _timestamp(self):
         return ("time", datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
@@ -167,7 +167,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
         if not self._fileName.endswith('.gcode') and '.' not in self._fileName:
             self._fileName += '.gcode'
-        Logger.log("d", self._name_id + " | Filename set to: " + self._fileName)
+        Logger.log("d", "Filename set to: " + self._fileName)
 
         self._dialog.deleteLater()
 
@@ -180,7 +180,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}").format(self._name), 0, False, -1)
         self._message.show()
 
-        Logger.log("d", self._name_id + " | Loading gcode...")
+        Logger.log("d", "Loading gcode...")
 
         # get the g-code through the GCodeWrite plugin
         # this serializes the actual scene and should produce the same output as "Save to File"
@@ -191,7 +191,7 @@ class DuetRRFOutputDevice(OutputDevice):
             return
 
         # start
-        Logger.log("d", self._name_id + " | Connecting...")
+        Logger.log("d", "Connecting...")
         self._send('rr_connect',
             query=[("password", self._duet_password), self._timestamp()],
             next_stage=self.onUploadReady,
@@ -199,9 +199,9 @@ class DuetRRFOutputDevice(OutputDevice):
         )
 
     def _check_duet3_sbc(self, errorCode):
-        Logger.log("d", self._name_id + " | rr_connect failed with errorCode " + str(errorCode))
+        Logger.log("d", "rr_connect failed with errorCode " + str(errorCode))
         if errorCode == QNetworkReply.ContentNotFoundError:
-            Logger.log("d", self._name_id + " | errorCode indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
+            Logger.log("d", "errorCode indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
             self._use_rrf_http_api = False  # let's try the newer DuetSoftwareFramework for Duet3+SBC API instead
             self._send('machine/status',
                 next_stage=self.onUploadReady
@@ -213,10 +213,10 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | Uploading...")
+        Logger.log("d", "Uploading...")
 
         self._stream.seek(0)
         self._postData = QByteArray()
@@ -239,16 +239,16 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | Upload done")
+        Logger.log("d", "Upload done")
 
         self._stream.close()
         self._stream = None
 
-        if self._device_type == DeviceType.simulate:
-            Logger.log("d", self._name_id + " | Simulating...")
+        if self._device_type == DuetRRFDeviceType.simulate:
+            Logger.log("d", "Simulating...")
             if self._message:
                 self._message.hide()
                 self._message = None
@@ -257,7 +257,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.show()
 
             gcode='M37 P"0:/gcodes/' + self._fileName + '"'
-            Logger.log("d", self._name_id + " | Sending gcode:" + gcode)
+            Logger.log("d", "Sending gcode:" + gcode)
             if self._use_rrf_http_api:
                 self._send('rr_gcode',
                     query=[("gcode", gcode)],
@@ -268,9 +268,9 @@ class DuetRRFOutputDevice(OutputDevice):
                     data=gcode.encode(),
                     next_stage=self.onSimulationPrintStarted,
                 )
-        elif self._device_type == DeviceType.print:
+        elif self._device_type == DuetRRFDeviceType.print:
             self.onReadyToPrint()
-        elif self._device_type == DeviceType.upload:
+        elif self._device_type == DuetRRFDeviceType.upload:
             if self._use_rrf_http_api:
                 self._send('rr_disconnect')
             if self._message:
@@ -290,10 +290,10 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", self._name_id + " | Ready to print")
+        Logger.log("d", "Ready to print")
 
         gcode = 'M32 "0:/gcodes/' + self._fileName + '"'
-        Logger.log("d", self._name_id + " | Sending gcode:" + gcode)
+        Logger.log("d", "Sending gcode:" + gcode)
         if self._use_rrf_http_api:
             self._send('rr_gcode',
                 query=[("gcode", gcode)],
@@ -309,10 +309,10 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | Print started")
+        Logger.log("d", "Print started")
 
         if self._use_rrf_http_api:
             self._send('rr_disconnect')
@@ -333,10 +333,10 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | Simulation print started for file " + self._fileName)
+        Logger.log("d", "Simulation print started for file " + self._fileName)
 
         # give it some to start the simulation
         QTimer.singleShot(2000, self.onCheckStatus)
@@ -345,7 +345,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
 
-        Logger.log("d", self._name_id + " | Checking status...")
+        Logger.log("d", "Checking status...")
 
         if self._use_rrf_http_api:
             self._send('rr_status',
@@ -361,12 +361,12 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | Status received - decoding...")
+        Logger.log("d", "Status received - decoding...")
         reply_body = bytes(reply.readAll()).decode()
-        Logger.log("d", self._name_id + " | Status: " + reply_body)
+        Logger.log("d", "Status: " + reply_body)
 
         status = json.loads(reply_body)
         if self._use_rrf_http_api:
@@ -382,10 +382,10 @@ class DuetRRFOutputDevice(OutputDevice):
                 self._message.setProgress(float(status["fractionPrinted"]))
             QTimer.singleShot(1000, self.onCheckStatus)
         else:
-            Logger.log("d", self._name_id + " | Simulation print finished")
+            Logger.log("d", "Simulation print finished")
 
             gcode='M37'
-            Logger.log("d", self._name_id + " | Sending gcode:" + gcode)
+            Logger.log("d", "Sending gcode:" + gcode)
             if self._use_rrf_http_api:
                 self._send('rr_gcode',
                     query=[("gcode", gcode)],
@@ -400,12 +400,12 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | M37 finished - let's get it's reply...")
+        Logger.log("d", "M37 finished - let's get it's reply...")
         reply_body = bytes(reply.readAll()).decode().strip()
-        Logger.log("d", self._name_id + " | M37 gcode reply | " + reply_body)
+        Logger.log("d", "M37 gcode reply | " + reply_body)
 
         self._send('rr_reply',
             next_stage=self.onReported,
@@ -415,12 +415,12 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
-            Logger.log("d", self._name_id + " | Stopping due to reply error: " + reply.error())
+            Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
-        Logger.log("d", self._name_id + " | Simulation status received - decoding...")
+        Logger.log("d", "Simulation status received - decoding...")
         reply_body = bytes(reply.readAll()).decode().strip()
-        Logger.log("d", self._name_id + " | Reported | " + reply_body)
+        Logger.log("d", "Reported | " + reply_body)
 
         if self._message:
             self._message.hide()
