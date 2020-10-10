@@ -28,9 +28,9 @@ Or go the manual route: with Cura not running, unpack the zip file from the
 [release](https://github.com/Kriechi/Cura-DuetRRFPlugin/releases/latest) to this
 specific folder:
 
-  * Windows: `C:\Users\<username>\AppData\Roaming\cura\4.7\plugins\DuetRRFPlugin`
-  * macOS: `~/Library/Application Support/Cura/4.7/plugins/DuetRRFPlugin`
-  * Linux: `/home/<username>/.local/share/cura/4.7/plugins/DuetRRFPlugin`
+  * Windows: `C:\Users\<username>\AppData\Roaming\cura\<latest version>\plugins\DuetRRFPlugin`
+  * macOS: `~/Library/Application Support/Cura/<latest version>/plugins/DuetRRFPlugin`
+  * Linux: `/home/<username>/.local/share/cura/<latest version>/plugins/DuetRRFPlugin`
 
 Be careful, the unzipper often tacks on the name of the zip as a folder at the
 bottom and you don't want it nested.  You want the files to show up in that
@@ -53,7 +53,7 @@ Duet-based printers are configured through Cura preferences for Printers:
 
 * Open Cura **Preferences**
 * Select **Printers**
-* Activate and select your **printer**
+* Activate and select your Duet RepRapFirmware-based printer
 * Click on **Connect Duet RepRapFirmware**
 * Enter the URL to your controller board
   - make sure this URL works if you copy & paste it into your browser

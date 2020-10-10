@@ -92,6 +92,7 @@ Cura.MachineAction
         Button {
             id: saveButton;
             text: catalog.i18nc("@action:button", "Test && Save");
+            width: 100;
             onClicked: {
                 manager.testAndSave(urlField.text, duet_passwordField.text, http_userField.text, http_passwordField.text);
                 actionDialog.reject();
@@ -102,6 +103,7 @@ Cura.MachineAction
         Button {
             id: deleteButton;
             text: catalog.i18nc("@action:button", "Delete Config");
+            width: 100;
             onClicked: {
                 manager.deleteConfig();
                 actionDialog.reject();

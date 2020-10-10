@@ -28,6 +28,6 @@ A clear and concise description of what you expected to happen.
 
 **Cura Log**
 Based on your Cura version, please drag&drop the log file into the issue, or copy&paste all lines with `DuetRRFPlugin`:
-Windows: C:\Users\<username>\AppData\Roaming\cura\4.6\cura.log
-macOS: ~/Library/Application Support/Cura/4.6/cura.log
-Linux: /home/<username>/.local/share/cura/4.6/cura.log
+Windows: C:\Users\<username>\AppData\Roaming\cura\<latest version>\cura.log
+macOS: ~/Library/Application Support/Cura/<latest version>/cura.log
+Linux: /home/<username>/.local/share/cura/<latest version>/cura.log

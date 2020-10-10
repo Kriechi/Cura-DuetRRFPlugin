@@ -25,16 +25,23 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         # only add legacy menu item if legacy settings exist
         try:
             self._instances = json.loads(CuraApplication.getInstance().getPreferences().getValue("duetrrf/instances"))
-            Logger.log("d", "found legacy settings for {}".format(", ".join(self._instances.keys())))
-            self.addMenuItem(catalog.i18n("(moved to Preferences→Printer)"), self.showSettingsDialog)
-            self.addMenuItem(catalog.i18n("(delete all old legacy settings)"), self.deleteAllOldLegacySettings)
+            if len(self._instances):
+                Logger.log("d", "found legacy settings for {}".format(", ".join(self._instances.keys())))
+                self.addMenuItem(catalog.i18n("(moved to Preferences→Printer)"), self.showUpgradeMessage)
+                self.addMenuItem(catalog.i18n("Show legacy settings..."), self.showUpgradeMessage)
+                self.addMenuItem(catalog.i18n("Delete legacy settings"), self.deleteLegacySettings)
+                self.showUpgradeMessage()
+            else:
+                CuraApplication.getInstance().getPreferences().removePreference("duetrrf/instances")
         except:
             pass
 
-    def migrateOldSettings(self):
+    def migrateLegacySettings(self):
         """
         This is only to provide legacy compatibility and will be removed in a future release.
         """
+        # LEGACY code - remove me!
+
         try:
             self._instances = json.loads(CuraApplication.getInstance().getPreferences().getValue("duetrrf/instances"))
         except:
@@ -58,32 +65,50 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             else:
                 CuraApplication.getInstance().getPreferences().setValue("duetrrf/instances", json.dumps(self._instances))
 
-    def showSettingsDialog(self):
+    def showUpgradeMessage(self):
         """
         This is only to provide legacy compatibility and will be removed in a future release.
         """
-        Logger.log("d", "DuetRRF showSettingsDialog called.")
-        message = Message(
+        # LEGACY code - remove me!
+        Logger.log("d", "DuetRRF showUpgradeMessage called.")
+        msg = (
             "Settings for the DuetRRF plugin moved to the Printer preferences.\n\n"
             "Please go to:\n"
-            "\t → Cura Preferences\n"
-            "\t → Printers\n"
-            "\t → activate and select your printer\n"
-            "\t → click on 'Connect Duet RepRapFirmware'\n\n"
-            "You still have legacy settings for other printers:\n{}\n\n"
-            "Please check all your printer settings!".format(
-                ",\n".join(self._instances.keys())
-            ),
+            "→ Cura Preferences\n"
+            "→ Printers\n"
+            "→ activate and select your printer\n"
+            "→ click on 'Connect Duet RepRapFirmware'\n"
+            "\n"
+            "Afterwards, you can can delete the legacy settings via:\n"
+            "→ Extensions menu → DuetRRF → Delete legacy settings\n"
+            "\n"
+            "You still have legacy settings for other printers:\n"
+        )
+        for name, data in self._instances.items():
+            t = "   {}:\n".format(name)
+            if "url" in data and data["url"].strip():
+                t += "→ URL: {}\n".format(data["url"])
+            if "duet_password" in data and data["duet_password"].strip():
+                t += "→ Duet password: {}\n".format(data["duet_password"])
+            if "http_username" in data and data["http_username"].strip():
+                t += "→ HTTP Basic username: {}\n".format(data["http_username"])
+            if "http_password" in data and data["http_password"].strip():
+                t += "→ HTTP Basic password: {}\n".format(data["http_password"])
+            msg += t
+
+        message = Message(
+            msg,
             lifetime=0,
-            title="Deprecation: DuetRRF settings have moved to Cura Preferences!",
+            title="DuetRRF: Settings moved to Cura Preferences!",
         )
         message.show()
 
-    def deleteAllOldLegacySettings(self):
+    def deleteLegacySettings(self):
         """
         This is only to provide legacy compatibility and will be removed in a future release.
         """
-        Logger.log("d", "DuetRRF deleteAllOldLegacySettings called.")
+        # LEGACY code - remove me!
+        Logger.log("d", "DuetRRF deleteLegacySettings called.")
         CuraApplication.getInstance().getPreferences().removePreference("duetrrf/instances")
         message = Message(
             "Legacy settings have been deleted for the following printers:\n{}\n\n"
@@ -91,16 +116,17 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
                 ",\n".join(self._instances.keys())
             ),
             lifetime=0,
-            title="Legacy DuetRRF settings successfully deleted!",
+            title="DuetRRF: Legacy settings successfully deleted!",
         )
         message.show()
+        self._instances = dict()
 
     def checkDuetRRFOutputDevices(self):
         global_container_stack = self._application.getGlobalContainerStack()
         if not global_container_stack:
             return
 
-        self.migrateOldSettings() # LEGACY code - remove me!
+        self.migrateLegacySettings() # LEGACY code - remove me!
 
         manager = self.getOutputDeviceManager()
 
@@ -116,4 +142,4 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             manager.addOutputDevice(DuetRRFOutputDevice("duetrrf-simulate", DuetRRFDeviceType.simulate))
             manager.addOutputDevice(DuetRRFOutputDevice("duetrrf-upload", DuetRRFDeviceType.upload))
         else:
-            Logger.log("d", "DuetRRF is not active for printer: " + global_container_stack.getName())
+            Logger.log("d", "DuetRRF is not available for printer: " + global_container_stack.getName())
