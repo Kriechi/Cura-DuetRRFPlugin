@@ -1,8 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
-## v1.1.0: 2020-XX-XX
+## v1.1.0: 2020-11-13
   * BREAKING CHANGE: migrate settings to be printer-specific
   * auto-migrate legacy settings for active printers if printer name matches
+  * bump compatibility for Cura 4.8 / API 7.4
 
 ## v1.0.11: 2020-08-29
   * bump compatibility for Cura 4.7 / API 7.3
