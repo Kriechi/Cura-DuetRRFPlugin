@@ -1,75 +1,65 @@
-import os
 import json
-import re
+
+from PyQt5.QtCore import Qt, QTimer
 
 from cura.CuraApplication import CuraApplication
+from cura.Settings.CuraContainerRegistry import CuraContainerRegistry
 
 from UM.Message import Message
 from UM.Logger import Logger
 from UM.Extension import Extension
-from UM.PluginRegistry import PluginRegistry
 from UM.OutputDevice.OutputDevicePlugin import OutputDevicePlugin
 from UM.i18n import i18nCatalog
+
 catalog = i18nCatalog("cura")
 
 from .DuetRRFOutputDevice import DuetRRFOutputDevice, DuetRRFDeviceType
+from .DuetRRFSettings import delete_config, get_config, init_settings, DUETRRF_SETTINGS
 
 
 class DuetRRFPlugin(Extension, OutputDevicePlugin):
     def __init__(self):
         super().__init__()
         self._application = CuraApplication.getInstance()
-        self._application.globalContainerStackChanged.connect(self.checkDuetRRFOutputDevices)
+        self._application.globalContainerStackChanged.connect(self._checkDuetRRFOutputDevices)
 
-        # LEGACY code - remove me!
-        # only add legacy menu item if legacy settings exist
+        init_settings()
+
+        self.addMenuItem(catalog.i18n("(moved to Preferences→Printer)"), self._showUnmappedSettingsMessage)
+
+        self._found_unmapped = {}
+
+        self._change_timer = QTimer()
+        self._change_timer.setInterval(2000)
+        self._change_timer.setSingleShot(True)
+        self._change_timer.timeout.connect(self._check_unmapped_settings)
+        self._change_timer.start()
+
+    def start(self):
+        pass
+
+    def stop(self, store_data: bool = True):
+        pass
+
+    def _check_unmapped_settings(self):
         try:
-            self._instances = json.loads(CuraApplication.getInstance().getPreferences().getValue("duetrrf/instances"))
-            if len(self._instances):
-                Logger.log("d", "found legacy settings for {}".format(", ".join(self._instances.keys())))
-                self.addMenuItem(catalog.i18n("(moved to Preferences→Printer)"), self.showUpgradeMessage)
-                self.addMenuItem(catalog.i18n("Show legacy settings..."), self.showUpgradeMessage)
-                self.addMenuItem(catalog.i18n("Delete legacy settings"), self.deleteLegacySettings)
-                self.showUpgradeMessage()
-            else:
-                CuraApplication.getInstance().getPreferences().removePreference("duetrrf/instances")
-        except:
-            pass
+            instances = json.loads(self._application.getPreferences().getValue(DUETRRF_SETTINGS))
 
-    def migrateLegacySettings(self):
-        """
-        This is only to provide legacy compatibility and will be removed in a future release.
-        """
-        # LEGACY code - remove me!
+            stacks = CuraContainerRegistry.getInstance().findContainerStacks(type='machine')
+            stacks = [stack.getId() for stack in stacks]
 
-        try:
-            self._instances = json.loads(CuraApplication.getInstance().getPreferences().getValue("duetrrf/instances"))
-        except:
-            return
+            for printer_id, data in instances.items():
+                if printer_id not in stacks:
+                    self._found_unmapped[printer_id] = data
+        except Exception as e:
+            Logger.log("d", str(e))
 
-        global_container_stack = self._application.getGlobalContainerStack()
-        name = global_container_stack.getName()
+        if self._found_unmapped:
+            self.addMenuItem(catalog.i18n("Show unmapped settings..."), self._showUnmappedSettingsMessage)
+            self.addMenuItem(catalog.i18n("Delete unmapped settings"), self._deleteUnmappedSettings)
+            self._showUnmappedSettingsMessage()
 
-        if name in self._instances.keys():
-            Logger.log("d", "migrating legacy settings for {}".format(name))
-            global_container_stack.setMetaDataEntry("duetrrf", True)
-            global_container_stack.setMetaDataEntry("duetrrf_url", self._instances[name]["url"])
-            global_container_stack.setMetaDataEntry("duetrrf_duet_password", self._instances[name]["duet_password"])
-            global_container_stack.setMetaDataEntry("duetrrf_http_user", self._instances[name]["http_user"])
-            global_container_stack.setMetaDataEntry("duetrrf_http_password", self._instances[name]["http_password"])
-
-            # delete this printer from the old settings - the new metadata is now the only source of truth.
-            del self._instances[name]
-            if len(self._instances) == 0:
-                CuraApplication.getInstance().getPreferences().removePreference("duetrrf/instances")
-            else:
-                CuraApplication.getInstance().getPreferences().setValue("duetrrf/instances", json.dumps(self._instances))
-
-    def showUpgradeMessage(self):
-        """
-        This is only to provide legacy compatibility and will be removed in a future release.
-        """
-        # LEGACY code - remove me!
+    def _showUnmappedSettingsMessage(self):
         Logger.log("d", "DuetRRF showUpgradeMessage called.")
         msg = (
             "Settings for the DuetRRF plugin moved to the Printer preferences.\n\n"
@@ -79,13 +69,13 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             "→ activate and select your printer\n"
             "→ click on 'Connect Duet RepRapFirmware'\n"
             "\n"
-            "Afterwards, you can can delete the legacy settings via:\n"
-            "→ Extensions menu → DuetRRF → Delete legacy settings\n"
+            "You can can delete unmapped settings of unknown printers via:\n"
+            "→ Extensions menu → DuetRRF → Delete unmapped settings\n"
             "\n"
-            "You still have legacy settings for other printers:\n"
+            "You have unmapped settings for unknown printers:\n"
         )
-        for name, data in self._instances.items():
-            t = "   {}:\n".format(name)
+        for printer_id, data in self._found_unmapped.items():
+            t = "   {}:\n".format(printer_id)
             if "url" in data and data["url"].strip():
                 t += "→ URL: {}\n".format(data["url"])
             if "duet_password" in data and data["duet_password"].strip():
@@ -103,30 +93,28 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         )
         message.show()
 
-    def deleteLegacySettings(self):
-        """
-        This is only to provide legacy compatibility and will be removed in a future release.
-        """
-        # LEGACY code - remove me!
-        Logger.log("d", "DuetRRF deleteLegacySettings called.")
-        CuraApplication.getInstance().getPreferences().removePreference("duetrrf/instances")
+    def _deleteUnmappedSettings(self):
+        Logger.log("d", "DuetRRF deleteUnmappedSettings called: {}".format(self._found_unmapped.keys()))
+
+        for printer_id in self._found_unmapped.keys():
+            delete_config(printer_id)
+
         message = Message(
-            "Legacy settings have been deleted for the following printers:\n{}\n\n"
+            "Unmapped settings have been deleted for the following printers:\n{}\n\n"
             "Please restart Cura.".format(
-                ",\n".join(self._instances.keys())
+                ",\n".join(self._found_unmapped.keys())
             ),
-            lifetime=0,
-            title="DuetRRF: Legacy settings successfully deleted!",
+            lifetime=5000,
+            title="DuetRRF: unmapped settings successfully deleted!",
         )
         message.show()
-        self._instances = dict()
 
-    def checkDuetRRFOutputDevices(self):
+        self._found_unmapped = {}
+
+    def _checkDuetRRFOutputDevices(self):
         global_container_stack = self._application.getGlobalContainerStack()
         if not global_container_stack:
             return
-
-        self.migrateLegacySettings() # LEGACY code - remove me!
 
         manager = self.getOutputDeviceManager()
 
@@ -136,10 +124,17 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         manager.removeOutputDevice("duetrrf-upload")
 
         # check and load new output devices
-        if global_container_stack.getMetaDataEntry("duetrrf"):
-            Logger.log("d", "DuetRRF is active for printer: " + global_container_stack.getName())
-            manager.addOutputDevice(DuetRRFOutputDevice("duetrrf-print", DuetRRFDeviceType.print))
-            manager.addOutputDevice(DuetRRFOutputDevice("duetrrf-simulate", DuetRRFDeviceType.simulate))
-            manager.addOutputDevice(DuetRRFOutputDevice("duetrrf-upload", DuetRRFDeviceType.upload))
+        s = get_config()
+        if s:
+            Logger.log("d", "DuetRRF is active for printer: id:{}, name:{}".format(
+                global_container_stack.getId(),
+                global_container_stack.getName(),
+            ))
+            manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.print))
+            manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.simulate))
+            manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.upload))
         else:
-            Logger.log("d", "DuetRRF is not available for printer: " + global_container_stack.getName())
+            Logger.log("d", "DuetRRF is not available for printer: id:{}, name:{}".format(
+                global_container_stack.getId(),
+                global_container_stack.getName(),
+            ))

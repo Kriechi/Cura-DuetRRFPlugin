@@ -1,8 +1,9 @@
 import os
 import json
 import re
+from typing import Dict, Type, TYPE_CHECKING, List, Optional, cast
 
-from PyQt5.QtCore import QObject, pyqtSlot
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtProperty, pyqtSignal
 
 from cura.CuraApplication import CuraApplication
 from cura.MachineAction import MachineAction
@@ -13,6 +14,8 @@ from UM.Settings.DefinitionContainer import DefinitionContainer
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
+from .DuetRRFSettings import delete_config, get_config, save_config
+
 
 class DuetRRFAction(MachineAction):
     def __init__(self, parent: QObject = None) -> None:
@@ -22,6 +25,13 @@ class DuetRRFAction(MachineAction):
         self._application = CuraApplication.getInstance()
 
         ContainerRegistry.getInstance().containerAdded.connect(self._onContainerAdded)
+        CuraApplication.getInstance().globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)
+
+    def _onGlobalContainerStackChanged(self) -> None:
+        self.printerSettingsUrlChanged.emit()
+        self.printerSettingsDuetPasswordChanged.emit()
+        self.printerSettingsHTTPUserChanged.emit()
+        self.printerSettingsHTTPPasswordChanged.emit()
 
     def _onContainerAdded(self, container: "ContainerInterface") -> None:
         # Add this action as a supported action to all machine definitions
@@ -32,64 +42,59 @@ class DuetRRFAction(MachineAction):
         ):
             self._application.getMachineActionManager().addSupportedAction(container.getId(), self.getKey())
 
-    @pyqtSlot(result=str)
-    def printerSettingUrl(self):
-        global_container_stack = self._application.getGlobalContainerStack()
-        if global_container_stack:
-            return global_container_stack.getMetaDataEntry("duetrrf_url", "")
+    def _reset(self) -> None:
+        self.printerSettingsUrlChanged.emit()
+        self.printerSettingsDuetPasswordChanged.emit()
+        self.printerSettingsHTTPUserChanged.emit()
+        self.printerSettingsHTTPPasswordChanged.emit()
+
+    printerSettingsUrlChanged = pyqtSignal()
+    printerSettingsDuetPasswordChanged = pyqtSignal()
+    printerSettingsHTTPUserChanged = pyqtSignal()
+    printerSettingsHTTPPasswordChanged = pyqtSignal()
+
+    @pyqtProperty(str, notify=printerSettingsUrlChanged)
+    def printerSettingUrl(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s["url"]
         return ""
 
-    @pyqtSlot(result=str)
-    def printerSettingDuetPassword(self):
-        global_container_stack = self._application.getGlobalContainerStack()
-        if global_container_stack:
-            return global_container_stack.getMetaDataEntry("duetrrf_duet_password", "")
+    @pyqtProperty(str, notify=printerSettingsDuetPasswordChanged)
+    def printerSettingDuetPassword(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s["duet_password"]
         return ""
 
-    @pyqtSlot(result=str)
-    def printerSettingHTTPUser(self):
-        global_container_stack = self._application.getGlobalContainerStack()
-        if global_container_stack:
-            return global_container_stack.getMetaDataEntry("duetrrf_http_user", "")
+    @pyqtProperty(str, notify=printerSettingsHTTPUserChanged)
+    def printerSettingHTTPUser(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s["http_user"]
         return ""
 
-    @pyqtSlot(result=str)
-    def printerSettingHTTPPassword(self):
-        global_container_stack = self._application.getGlobalContainerStack()
-        if global_container_stack:
-            return global_container_stack.getMetaDataEntry("duetrrf_http_password", "")
+    @pyqtProperty(str, notify=printerSettingsHTTPPasswordChanged)
+    def printerSettingHTTPPassword(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s["http_password"]
         return ""
 
     @pyqtSlot(str, str, str, str)
-    def testAndSave(self, url, duet_password, http_user, http_password):
+    def saveConfig(self, url, duet_password, http_user, http_password):
         if not url.endswith('/'):
             url += '/'
 
-        global_container_stack = self._application.getGlobalContainerStack()
-        if not global_container_stack:
-            Logger.log("e", "failed to save config: global_container_stack is missing")
-            return
-
-        global_container_stack.setMetaDataEntry("duetrrf", True)
-        global_container_stack.setMetaDataEntry("duetrrf_url", url)
-        global_container_stack.setMetaDataEntry("duetrrf_duet_password", duet_password)
-        global_container_stack.setMetaDataEntry("duetrrf_http_user", http_user)
-        global_container_stack.setMetaDataEntry("duetrrf_http_password", http_password)
-        Logger.log("d", "config saved: " + global_container_stack.getName())
+        save_config(url, duet_password, http_user, http_password)
+        Logger.log("d", "config saved")
 
     @pyqtSlot()
     def deleteConfig(self):
-        global_container_stack = self._application.getGlobalContainerStack()
-        if not global_container_stack:
-            Logger.log("e", "failed to delete config: global_container_stack is missing")
-            return
-
-        global_container_stack.removeMetaDataEntry("duetrrf")
-        global_container_stack.removeMetaDataEntry("duetrrf_url")
-        global_container_stack.removeMetaDataEntry("duetrrf_duet_password")
-        global_container_stack.removeMetaDataEntry("duetrrf_http_user")
-        global_container_stack.removeMetaDataEntry("duetrrf_http_password")
-        Logger.log("d", "config deleted: " + global_container_stack.getName())
+        if delete_config():
+            Logger.log("d", "config deleted")
+        else:
+            Logger.log("d", "no config to delete")
 
     @pyqtSlot(str, result=bool)
     def validUrl(self, newUrl):

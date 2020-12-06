@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.0: 2020-XX-XX
+  * store settings in local preferences instead of sharable metadata
+
 ## v1.1.0: 2020-11-13
   * BREAKING CHANGE: migrate settings to be printer-specific
   * auto-migrate legacy settings for active printers if printer name matches

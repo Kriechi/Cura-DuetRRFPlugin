@@ -39,12 +39,17 @@ class DuetRRFDeviceType(Enum):
 
 
 class DuetRRFOutputDevice(OutputDevice):
-    def __init__(self, name_id, device_type):
-        self._name_id = name_id
-        super().__init__(name_id)
+    def __init__(self, settings, device_type):
+        self._name_id = "duetrrf-{}".format(device_type)
+        self._url = settings["url"]
+        self._duet_password = settings["duet_password"]
+        self._http_user = settings["http_user"]
+        self._http_password = settings["http_password"]
 
-        self._application = CuraApplication.getInstance()
-        global_container_stack = self._application.getGlobalContainerStack()
+        super().__init__(self._name_id)
+
+        application = CuraApplication.getInstance()
+        global_container_stack = application.getGlobalContainerStack()
         self._name = global_container_stack.getName()
 
         self._device_type = device_type
@@ -68,11 +73,6 @@ class DuetRRFOutputDevice(OutputDevice):
         self._device_type = device_type
         self._stream = None
         self._message = None
-
-        self._url = global_container_stack.getMetaDataEntry("duetrrf_url", "")
-        self._duet_password = global_container_stack.getMetaDataEntry("duetrrf_duet_password", "")
-        self._http_user = global_container_stack.getMetaDataEntry("duetrrf_http_user", "")
-        self._http_password = global_container_stack.getMetaDataEntry("duetrrf_http_password", "")
 
         self._use_rrf_http_api = True # by default we try to connect to the RRF HTTP API via rr_connect
 
@@ -177,7 +177,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeStarted.emit(self)
 
         # show a progress message
-        self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}").format(self._name), 0, False, -1)
+        self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
         self._message.show()
 
         Logger.log("d", "Loading gcode...")
@@ -320,7 +320,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.hide()
             self._message = None
 
-        text = "Print started on {} with file {}".format(self._name, self._fileName)
+        text = "Print started on {} with file {}.".format(self._name, self._fileName)
         self._message = Message(catalog.i18nc("@info:status", text), 0, False)
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
