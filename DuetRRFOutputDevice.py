@@ -48,8 +48,8 @@ class DuetRRFOutputDevice(OutputDevice):
 
         super().__init__(self._name_id)
 
-        application = CuraApplication.getInstance()
-        global_container_stack = application.getGlobalContainerStack()
+        self.application = CuraApplication.getInstance()
+        global_container_stack = self.application.getGlobalContainerStack()
         self._name = global_container_stack.getName()
 
         self._device_type = device_type
@@ -99,32 +99,43 @@ class DuetRRFOutputDevice(OutputDevice):
         if enc_query:
             url += '?' + enc_query
 
-        request = QtNetwork.QNetworkRequest(QUrl(url))
-        request.setRawHeader(b'User-Agent', b'Cura Plugin DuetRRF')
-        request.setRawHeader(b'Accept', b'application/json, text/javascript')
-        request.setRawHeader(b'Connection', b'keep-alive')
+        headers = {
+            'User-Agent': 'Cura Plugin DuetRRF',
+            'Accept': 'application/json, text/javascript',
+            'Connection': 'keep-alive',
+        }
 
         if self._http_user and self._http_password:
-            request.setRawHeader(b'Authorization', b'Basic ' + base64.b64encode("{}:{}".format(self._http_user, self._http_password).encode()))
-
-        self._qnam = QtNetwork.QNetworkAccessManager()
-        if next_stage:
-            self._qnam.finished.connect(next_stage)
+            auth = "{}:{}".format(self._http_user, self._http_password).encode()
+            headers['Authorization'] = 'Basic ' + base64.b64encode(auth)
 
         if data:
-            request.setRawHeader(b'Content-Type', b'application/octet-stream')
+            headers['Content-Type'] = 'application/octet-stream'
             if method == 'PUT':
-                self._reply = self._qnam.put(request, data)
+                self._reply = self.application.getHttpRequestManager().put(
+                    url,
+                    headers,
+                    data,
+                    callback=next_stage,
+                    error_callback=on_error if on_error else self._onNetworkError,
+                    upload_progress_callback=self._onUploadProgress,
+                )
             else:
-                self._reply = self._qnam.post(request, data)
-            self._reply.uploadProgress.connect(self._onUploadProgress)
+                self._reply = self.application.getHttpRequestManager().post(
+                    url,
+                    headers,
+                    data,
+                    callback=next_stage,
+                    error_callback=on_error if on_error else self._onNetworkError,
+                    upload_progress_callback=self._onUploadProgress,
+                )
         else:
-            self._reply = self._qnam.get(request)
-
-        if on_error:
-            self._reply.error.connect(on_error)
-        else:
-            self._reply.error.connect(self._onNetworkError)
+            self._reply = self.application.getHttpRequestManager().get(
+                url,
+                headers,
+                callback=next_stage,
+                error_callback=on_error if on_error else self._onNetworkError,
+            )
 
     def requestWrite(self, node, fileName=None, *args, **kwargs):
         if self._stage != OutputStage.ready:
@@ -198,16 +209,16 @@ class DuetRRFOutputDevice(OutputDevice):
             on_error=self._check_duet3_sbc,
         )
 
-    def _check_duet3_sbc(self, errorCode):
-        Logger.log("d", "rr_connect failed with errorCode " + str(errorCode))
-        if errorCode == QNetworkReply.ContentNotFoundError:
-            Logger.log("d", "errorCode indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
+    def _check_duet3_sbc(self, reply, error):
+        Logger.log("d", "rr_connect failed with error " + str(error))
+        if error == QNetworkReply.ContentNotFoundError:
+            Logger.log("d", "error indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
             self._use_rrf_http_api = False  # let's try the newer DuetSoftwareFramework for Duet3+SBC API instead
             self._send('machine/status',
                 next_stage=self.onUploadReady
             )
         else:
-            self._onNetworkError(errorCode)
+            self._onNetworkError(reply, error)
 
     def onUploadReady(self, reply):
         if self._stage != OutputStage.writing:
@@ -443,15 +454,14 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeProgress.emit(self, progress)
 
     def _cleanupRequest(self):
-        Logger.log("d", "_cleanupRequest called")
+        Logger.log("d", "starting cleanup")
         self._reply = None
-        self._qnam = None
         if self._stream:
             self._stream.close()
         self._stream = None
         self._stage = OutputStage.ready
         self._fileName = None
-        Logger.log("d", "_cleanupRequest finished")
+        Logger.log("d", "finished cleanup")
 
     def _onMessageActionTriggered(self, message, action):
         if action == "open_browser":
@@ -464,9 +474,9 @@ class DuetRRFOutputDevice(OutputDevice):
         if bytesTotal > 0:
             self._onProgress(int(bytesSent * 100 / bytesTotal))
 
-    def _onNetworkError(self, errorCode):
+    def _onNetworkError(self, reply, error):
         # https://doc.qt.io/qt-5/qnetworkreply.html#NetworkError-enum
-        Logger.log("e", "_onNetworkError: %s", repr(errorCode))
+        Logger.log("e", repr(error))
         if self._message:
             self._message.hide()
             self._message = None
@@ -475,7 +485,7 @@ class DuetRRFOutputDevice(OutputDevice):
             errorString = self._reply.errorString()
         else:
             errorString = ''
-        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(errorCode, errorString), 0, False)
+        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(error, errorString), 0, False)
         message.show()
 
         self.writeError.emit(self)
