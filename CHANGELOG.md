@@ -1,7 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
-## v1.2.0: 2020-XX-XX
+## v1.2.0: 2021-XX-XX
   * store settings in local preferences instead of sharable metadata
+  * use managed HttpRequestManager instead of low-level QNetworkAccessManager
+  * add a "Configure" output device for easy initial setup
 
 ## v1.1.0: 2020-11-13
   * BREAKING CHANGE: migrate settings to be printer-specific
