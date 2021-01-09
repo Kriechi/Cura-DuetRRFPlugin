@@ -13,7 +13,7 @@ from UM.i18n import i18nCatalog
 
 catalog = i18nCatalog("cura")
 
-from .DuetRRFOutputDevice import DuetRRFOutputDevice, DuetRRFDeviceType
+from .DuetRRFOutputDevice import DuetRRFConfigureOutputDevice, DuetRRFOutputDevice, DuetRRFDeviceType
 from .DuetRRFSettings import delete_config, get_config, init_settings, DUETRRF_SETTINGS
 
 
@@ -119,6 +119,7 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         manager = self.getOutputDeviceManager()
 
         # remove all DuetRRF output devices - the new stack might not need them
+        manager.removeOutputDevice("duetrrf-configure")
         manager.removeOutputDevice("duetrrf-print")
         manager.removeOutputDevice("duetrrf-simulate")
         manager.removeOutputDevice("duetrrf-upload")
@@ -134,6 +135,7 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.simulate))
             manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.upload))
         else:
+            manager.addOutputDevice(DuetRRFConfigureOutputDevice())
             Logger.log("d", "DuetRRF is not available for printer: id:{}, name:{}".format(
                 global_container_stack.getId(),
                 global_container_stack.getName(),

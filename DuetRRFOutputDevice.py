@@ -38,15 +38,39 @@ class DuetRRFDeviceType(Enum):
     upload = 2
 
 
+class DuetRRFConfigureOutputDevice(OutputDevice):
+    def __init__(self) -> None:
+        super().__init__("duetrrf-configure")
+        self.setShortDescription("DuetRRF Plugin")
+        self.setDescription("Configure Duet RepRapFirmware...")
+        self.setPriority(0)
+
+    def requestWrite(self, node, fileName=None, *args, **kwargs):
+        msg = (
+            "To configure your Duet RepRapFirmware printer go to:\n"
+            "→ Cura Preferences\n"
+            "→ Printers\n"
+            "→ activate and select your printer\n"
+            "→ click on 'Connect Duet RepRapFirmware'\n"
+        )
+        message = Message(
+            msg,
+            lifetime=0,
+            title="Configure DuetRRF in Cura Preferences!",
+        )
+        message.show()
+        self.writeSuccess.emit(self)
+
+
 class DuetRRFOutputDevice(OutputDevice):
     def __init__(self, settings, device_type):
-        self._name_id = "duetrrf-{}".format(device_type)
+        self._name_id = "duetrrf-{}".format(device_type.name)
+        super().__init__(self._name_id)
+
         self._url = settings["url"]
         self._duet_password = settings["duet_password"]
         self._http_user = settings["http_user"]
         self._http_password = settings["http_password"]
-
-        super().__init__(self._name_id)
 
         self.application = CuraApplication.getInstance()
         global_container_stack = self.application.getGlobalContainerStack()
