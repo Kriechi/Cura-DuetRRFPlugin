@@ -26,16 +26,16 @@ Cura.MachineAction
 
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 500;
-        actionDialog.minimumHeight = screenScaleFactor * 240;
+        actionDialog.minimumHeight = screenScaleFactor * 255;
         actionDialog.maximumWidth = screenScaleFactor * 500;
-        actionDialog.maximumHeight = screenScaleFactor * 240;
+        actionDialog.maximumHeight = screenScaleFactor * 255;
     }
 
     Column {
         anchors.fill: parent;
 
         Item { width: parent.width; }
-        Label { text: catalog.i18nc("@label", "Server Address (URL)"); }
+        Label { text: catalog.i18nc("@label", "Duet Address (URL)"); }
         TextField {
             id: urlField;
             text: manager.printerSettingUrl;
@@ -81,6 +81,7 @@ Cura.MachineAction
         Label {
             visible: !base.validUrl;
             text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.42/");
+            color: "red";
         }
 
         Item {
