@@ -70,21 +70,22 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             "→ click on 'Connect Duet RepRapFirmware'\n"
             "\n"
             "You can can delete unmapped settings of unknown printers via:\n"
-            "→ Extensions menu → DuetRRF → Delete unmapped settings\n"
-            "\n"
-            "You have unmapped settings for unknown printers:\n"
+            "→ Extensions menu → DuetRRF → Delete unmapped settings"
         )
-        for printer_id, data in self._found_unmapped.items():
-            t = "   {}:\n".format(printer_id)
-            if "url" in data and data["url"].strip():
-                t += "→ URL: {}\n".format(data["url"])
-            if "duet_password" in data and data["duet_password"].strip():
-                t += "→ Duet password: {}\n".format(data["duet_password"])
-            if "http_username" in data and data["http_username"].strip():
-                t += "→ HTTP Basic username: {}\n".format(data["http_username"])
-            if "http_password" in data and data["http_password"].strip():
-                t += "→ HTTP Basic password: {}\n".format(data["http_password"])
-            msg += t
+        if self._found_unmapped:
+            msg += "\n\n"
+            msg += "You have unmapped settings for unknown printers:\n"
+            for printer_id, data in self._found_unmapped.items():
+                t = "   {}:\n".format(printer_id)
+                if "url" in data and data["url"].strip():
+                    t += "→ URL: {}\n".format(data["url"])
+                if "duet_password" in data and data["duet_password"].strip():
+                    t += "→ Duet password: {}\n".format(data["duet_password"])
+                if "http_username" in data and data["http_username"].strip():
+                    t += "→ HTTP Basic username: {}\n".format(data["http_username"])
+                if "http_password" in data and data["http_password"].strip():
+                    t += "→ HTTP Basic password: {}\n".format(data["http_password"])
+                msg += t
 
         message = Message(
             msg,

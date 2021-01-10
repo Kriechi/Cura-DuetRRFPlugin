@@ -38,8 +38,10 @@ def save_config(url, duet_password, http_user, http_password):
     p.setValue(DUETRRF_SETTINGS, json.dumps(s))
     return s
 
-def delete_config():
-    s, printer_id = _load_prefs()
+def delete_config(printer_id=None):
+    s, active_printer_id = _load_prefs()
+    if not printer_id:
+        printer_id = active_printer_id
     if printer_id in s:
         del s[printer_id]
         application = CuraApplication.getInstance()
