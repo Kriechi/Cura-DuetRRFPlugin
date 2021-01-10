@@ -109,7 +109,7 @@ class DuetRRFOutputDevice(OutputDevice):
             "set" if self._http_password else "<empty>",
         ))
 
-        self._cleanupRequest()
+        self._resetState()
 
     def _timestamp(self):
         return ("time", datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
@@ -136,7 +136,7 @@ class DuetRRFOutputDevice(OutputDevice):
         if data:
             headers['Content-Type'] = 'application/octet-stream'
             if method == 'PUT':
-                self._reply = self.application.getHttpRequestManager().put(
+                self.application.getHttpRequestManager().put(
                     url,
                     headers,
                     data,
@@ -145,7 +145,7 @@ class DuetRRFOutputDevice(OutputDevice):
                     upload_progress_callback=self._onUploadProgress,
                 )
             else:
-                self._reply = self.application.getHttpRequestManager().post(
+                self.application.getHttpRequestManager().post(
                     url,
                     headers,
                     data,
@@ -154,7 +154,7 @@ class DuetRRFOutputDevice(OutputDevice):
                     upload_progress_callback=self._onUploadProgress,
                 )
         else:
-            self._reply = self.application.getHttpRequestManager().get(
+            self.application.getHttpRequestManager().get(
                 url,
                 headers,
                 callback=next_stage,
@@ -319,7 +319,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.show()
 
             self.writeSuccess.emit(self)
-            self._cleanupRequest()
+            self._resetState()
 
     def onReadyToPrint(self):
         if self._stage != OutputStage.writing:
@@ -362,7 +362,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._message.show()
 
         self.writeSuccess.emit(self)
-        self._cleanupRequest()
+        self._resetState()
 
     def onSimulationPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
@@ -470,16 +470,15 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._use_rrf_http_api:
             self._send('rr_disconnect')
         self.writeSuccess.emit(self)
-        self._cleanupRequest()
+        self._resetState()
 
     def _onProgress(self, progress):
         if self._message:
             self._message.setProgress(progress)
         self.writeProgress.emit(self, progress)
 
-    def _cleanupRequest(self):
+    def _resetState(self):
         Logger.log("d", "starting cleanup")
-        self._reply = None
         if self._stream:
             self._stream.close()
         self._stream = None
@@ -505,12 +504,12 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.hide()
             self._message = None
 
-        if self._reply:
-            errorString = self._reply.errorString()
-        else:
-            errorString = ''
+        errorString = ''
+        if reply:
+            errorString = reply.errorString()
+
         message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(error, errorString), 0, False)
         message.show()
 
         self.writeError.emit(self)
-        self._cleanupRequest()
+        self._resetState()
