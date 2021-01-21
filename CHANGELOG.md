@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.1: next
+  * fix button width on high-dpi screens
+
 ## v1.2.0: 2021-01-10
   * store settings in local preferences instead of sharable metadata
   * use managed HttpRequestManager instead of low-level QNetworkAccessManager
