@@ -1,7 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
-## v1.2.1: next
+## v1.2.1: 2021-01-21
   * fix button width on high-dpi screens
+  * fix race condition when checking for unmapped settings
 
 ## v1.2.0: 2021-01-10
   * store settings in local preferences instead of sharable metadata

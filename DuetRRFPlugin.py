@@ -22,6 +22,7 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         super().__init__()
         self._application = CuraApplication.getInstance()
         self._application.globalContainerStackChanged.connect(self._checkDuetRRFOutputDevices)
+        self._application.initializationFinished.connect(self._delay_check_unmapped_settings)
 
         init_settings()
 
@@ -29,19 +30,21 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
 
         self._found_unmapped = {}
 
-        self._change_timer = QTimer()
-        self._change_timer.setInterval(2000)
-        self._change_timer.setSingleShot(True)
-        self._change_timer.timeout.connect(self._check_unmapped_settings)
-        self._change_timer.start()
-
     def start(self):
         pass
 
     def stop(self, store_data: bool = True):
         pass
 
+    def _delay_check_unmapped_settings(self):
+        self._change_timer = QTimer()
+        self._change_timer.setInterval(10000)
+        self._change_timer.setSingleShot(True)
+        self._change_timer.timeout.connect(self._check_unmapped_settings)
+        self._change_timer.start()
+
     def _check_unmapped_settings(self):
+        Logger.log("d", "called")
         try:
             instances = json.loads(self._application.getPreferences().getValue(DUETRRF_SETTINGS))
 
