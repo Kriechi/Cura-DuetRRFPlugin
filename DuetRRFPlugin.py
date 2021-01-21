@@ -55,12 +55,16 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             Logger.log("d", str(e))
 
         if self._found_unmapped:
+            Logger.log("d", "Unmapped settings found!")
             self.addMenuItem(catalog.i18n("Show unmapped settings..."), self._showUnmappedSettingsMessage)
             self.addMenuItem(catalog.i18n("Delete unmapped settings"), self._deleteUnmappedSettings)
             self._showUnmappedSettingsMessage()
+        else:
+            Logger.log("d", "No unmapped settings found.")
 
     def _showUnmappedSettingsMessage(self):
-        Logger.log("d", "DuetRRF showUpgradeMessage called.")
+        Logger.log("d", "called: {}".format(self._found_unmapped.keys()))
+
         msg = (
             "Settings for the DuetRRF plugin moved to the Printer preferences.\n\n"
             "Please go to:\n"
@@ -95,7 +99,7 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         message.show()
 
     def _deleteUnmappedSettings(self):
-        Logger.log("d", "DuetRRF deleteUnmappedSettings called: {}".format(self._found_unmapped.keys()))
+        Logger.log("d", "called: {}".format(self._found_unmapped.keys()))
 
         for printer_id in self._found_unmapped.keys():
             delete_config(printer_id)

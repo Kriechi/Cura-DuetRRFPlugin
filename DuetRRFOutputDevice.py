@@ -478,13 +478,12 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeProgress.emit(self, progress)
 
     def _resetState(self):
-        Logger.log("d", "starting cleanup")
+        Logger.log("d", "called")
         if self._stream:
             self._stream.close()
         self._stream = None
         self._stage = OutputStage.ready
         self._fileName = None
-        Logger.log("d", "finished cleanup")
 
     def _onMessageActionTriggered(self, message, action):
         if action == "open_browser":
