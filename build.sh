@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -o errexit
+
 TAG=$(git describe --abbrev=0 --tags --exact-match)
 git archive ${TAG} --prefix=DuetRRFPlugin/ --format=zip -o ~/Downloads/DuetRRFPlugin_${TAG}.zip
 

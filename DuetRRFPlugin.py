@@ -126,7 +126,7 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
 
         manager = self.getOutputDeviceManager()
 
-        # remove all DuetRRF output devices - the new stack might not need them
+        # remove all DuetRRF output devices - the new stack might not need them or have a different config
         manager.removeOutputDevice("duetrrf-configure")
         manager.removeOutputDevice("duetrrf-print")
         manager.removeOutputDevice("duetrrf-simulate")

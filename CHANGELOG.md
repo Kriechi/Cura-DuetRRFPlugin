@@ -1,5 +1,9 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.2: 2021-01-27
+  * add OutputDevices on currently active printer after saving config
+  * remove OutputDevices on currently active printer after deleting config
+
 ## v1.2.1: 2021-01-21
   * fix button width on high-dpi screens
   * fix race condition when checking for unmapped settings

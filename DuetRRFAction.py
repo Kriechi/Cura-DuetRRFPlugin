@@ -22,10 +22,10 @@ class DuetRRFAction(MachineAction):
         super().__init__("DuetRRFAction", catalog.i18nc("@action", "Connect Duet RepRapFirmware"))
 
         self._qml_url = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'DuetRRFAction.qml')
-        self._application = CuraApplication.getInstance()
 
+        self._application = CuraApplication.getInstance()
+        self._application.globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)
         ContainerRegistry.getInstance().containerAdded.connect(self._onContainerAdded)
-        CuraApplication.getInstance().globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)
 
     def _onGlobalContainerStackChanged(self) -> None:
         self.printerSettingsUrlChanged.emit()
@@ -89,10 +89,16 @@ class DuetRRFAction(MachineAction):
         save_config(url, duet_password, http_user, http_password)
         Logger.log("d", "config saved")
 
+        # trigger a stack change to reload the output devices
+        self._application.globalContainerStackChanged.emit()
+
     @pyqtSlot()
     def deleteConfig(self):
         if delete_config():
             Logger.log("d", "config deleted")
+
+            # trigger a stack change to reload the output devices
+            self._application.globalContainerStackChanged.emit()
         else:
             Logger.log("d", "no config to delete")
 
