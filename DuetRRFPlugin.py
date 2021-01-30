@@ -59,8 +59,6 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
 
         if self._found_unmapped:
             Logger.log("d", "Unmapped settings found!")
-            self.addMenuItem(catalog.i18n("Show unmapped settings..."), self._showUnmappedSettingsMessage)
-            self.addMenuItem(catalog.i18n("Delete unmapped settings"), self._deleteUnmappedSettings)
             self._showUnmappedSettingsMessage()
         else:
             Logger.log("d", "No unmapped settings found.")
@@ -75,9 +73,6 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             "→ Printers\n"
             "→ activate and select your printer\n"
             "→ click on 'Connect Duet RepRapFirmware'\n"
-            "\n"
-            "You can can delete unmapped settings of unknown printers via:\n"
-            "→ Extensions menu → DuetRRF → Delete unmapped settings"
         )
         if self._found_unmapped:
             msg += "\n\n"
@@ -99,24 +94,45 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
             lifetime=0,
             title="DuetRRF: Settings moved to Cura Preferences!",
         )
+        if self._found_unmapped:
+            message.addAction(
+                action_id="ignore",
+                name=catalog.i18nc("@action:button", "Ignore"),
+                icon="",
+                description="Close this message",
+            )
+            message.addAction(
+                action_id="delete",
+                name=catalog.i18nc("@action:button", "Delete"),
+                icon="",
+                description="Delete unmapped settings for unknown printers",
+            )
+            message.actionTriggered.connect(self._onActionTriggeredUnmappedSettings)
         message.show()
 
-    def _deleteUnmappedSettings(self):
-        Logger.log("d", "called: {}".format(self._found_unmapped.keys()))
+    def _onActionTriggeredUnmappedSettings(self, message, action):
+        Logger.log("d", "called: {}, {}".format(action, self._found_unmapped.keys()))
+        message.hide()
+
+        if action == "ignore":
+            return
+        if action == "delete" and not self._found_unmapped:
+            return
 
         for printer_id in self._found_unmapped.keys():
-            delete_config(printer_id)
+            if delete_config(printer_id):
+                Logger.log("d", "successfully delete unmapped settings for {}".format(printer_id))
+            else:
+                Logger.log("e", "failed to delete unmapped settings for {}".format(printer_id))
 
         message = Message(
-            "Unmapped settings have been deleted for the following printers:\n{}\n\n"
-            "Please restart Cura.".format(
+            "Unmapped settings have been deleted for the following printers:\n{}\n\n".format(
                 ",\n".join(self._found_unmapped.keys())
             ),
             lifetime=5000,
             title="DuetRRF: unmapped settings successfully deleted!",
         )
         message.show()
-
         self._found_unmapped = {}
 
     def _checkDuetRRFOutputDevices(self):
