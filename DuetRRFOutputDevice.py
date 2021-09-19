@@ -212,7 +212,13 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeStarted.emit(self)
 
         # show a progress message
-        self._message = Message(catalog.i18nc("@info:progress", "Uploading to {}...").format(self._name), 0, False, -1)
+        self._message = Message(
+            "Uploading {} ...".format(self._fileName),
+            lifetime=0,
+            dismissable=False,
+            progress=-1,
+            title="DuetRRF: " + self._name,
+        )
         self._message.show()
 
         Logger.log("d", "Loading gcode...")
@@ -288,7 +294,13 @@ class DuetRRFOutputDevice(OutputDevice):
                 self._message.hide()
                 self._message = None
 
-            self._message = Message(catalog.i18nc("@info:progress", "Simulating print on {}...\nPLEASE CLOSE DWC AND DO NOT INTERACT WITH THE PRINTER!").format(self._name), 0, False, -1)
+            self._message = Message(
+                "Simulating print {}...\nPlease close DWC and DO NOT interact with the printer!".format(self._fileName),
+                lifetime=0,
+                dismissable=False,
+                progress=-1,
+                title="DuetRRF: " + self._name,
+            )
             self._message.show()
 
             gcode='M37 P"0:/gcodes/' + self._fileName + '"'
@@ -312,8 +324,11 @@ class DuetRRFOutputDevice(OutputDevice):
                 self._message.hide()
                 self._message = None
 
-            text = "Uploaded file {} to {}.".format(os.path.basename(self._fileName), self._name)
-            self._message = Message(catalog.i18nc("@info:status", text), 0, False)
+            self._message = Message(
+                "Uploaded file: {}".format(self._fileName),
+                lifetime=15,
+                title="DuetRRF: " + self._name,
+            )
             self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
             self._message.actionTriggered.connect(self._onMessageActionTriggered)
             self._message.show()
@@ -355,8 +370,11 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.hide()
             self._message = None
 
-        text = "Print started on {} with file {}.".format(self._name, self._fileName)
-        self._message = Message(catalog.i18nc("@info:status", text), 0, False)
+        self._message = Message(
+            "Print started: {}".format(self._fileName),
+            lifetime=15,
+            title="DuetRRF: " + self._name,
+        )
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
         self._message.show()
@@ -461,8 +479,11 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.hide()
             self._message = None
 
-        text = "Simulation finished on {}:\n\n{}".format(self._name, reply_body)
-        self._message = Message(catalog.i18nc("@info:status", text), 0, False)
+        self._message = Message(
+            "Simulation finished!\n\n{}".format(reply_body),
+            lifetime=0,
+            title="DuetRRF: " + self._name,
+        )
         self._message.addAction("open_browser", catalog.i18nc("@action:button", "Open Browser"), "globe", catalog.i18nc("@info:tooltip", "Open browser to DuetWebControl."))
         self._message.actionTriggered.connect(self._onMessageActionTriggered)
         self._message.show()
@@ -507,7 +528,11 @@ class DuetRRFOutputDevice(OutputDevice):
         if reply:
             errorString = reply.errorString()
 
-        message = Message(catalog.i18nc("@info:status", "There was a network error: {} {}").format(error, errorString), 0, False)
+        message = Message(
+            "There was a network error: {} {}".format(error, errorString),
+            lifetime=0,
+            title="DuetRRF: " + self._name,
+        )
         message.show()
 
         self.writeError.emit(self)

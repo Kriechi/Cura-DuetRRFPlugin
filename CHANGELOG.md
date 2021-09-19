@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.4: 2021-09-19
+  * auto-dismiss success message notifications after 15sec
+
 ## v1.2.3: 2021-01-30
   * move deleting of unmapped settings to action button on message
   * correctly bump plugin version metadata
