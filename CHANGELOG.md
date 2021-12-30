@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.5: 2021-
+  * embed a QOI thumbnail image of the sliced scene into the uploaded gcode file
+
 ## v1.2.4: 2021-09-19
   * auto-dismiss success message notifications after 15sec
 
