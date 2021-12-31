@@ -1,4 +1,5 @@
 import json
+import os
 
 from cura.CuraApplication import CuraApplication
 
@@ -49,3 +50,12 @@ def delete_config(printer_id=None):
         p.setValue(DUETRRF_SETTINGS, json.dumps(s))
         return True
     return False
+
+def get_plugin_version():
+    plugin_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugin.json")
+    try:
+        with open(plugin_file_path) as plugin_file:
+            plugin_info = json.load(plugin_file)
+        return plugin_info["version"]
+    except:
+        return None

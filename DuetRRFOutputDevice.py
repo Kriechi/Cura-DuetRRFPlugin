@@ -1,9 +1,8 @@
-import array
 import os.path
 import datetime
-import base64
 import urllib
 import json
+import base64
 from io import StringIO
 from typing import cast
 from enum import Enum
@@ -11,19 +10,11 @@ from enum import Enum
 from PyQt5 import QtNetwork, QtCore
 from PyQt5.QtNetwork import QNetworkReply
 
-from PyQt5.QtCore import QFile, QUrl, QObject, QCoreApplication, QByteArray, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QDesktopServices, QImage
+from PyQt5.QtCore import QFile, QUrl, QObject, QByteArray, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtQml import QQmlComponent, QQmlContext
 
 from cura.CuraApplication import CuraApplication
-from cura.Snapshot import Snapshot
-from cura.PreviewPass import PreviewPass
-
-from UM.Application import Application
-from UM.Math.Matrix import Matrix
-from UM.Math.Vector import Vector
-from UM.Scene.Camera import Camera
-from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
 from UM.Application import Application
 from UM.Logger import Logger
@@ -35,7 +26,8 @@ from UM.OutputDevice import OutputDeviceError
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
-from .qoi import QOIEncoder
+from . import DuetRRFSettings
+from .thumbnails import generate_thumbnail
 
 
 class OutputStage(Enum):
@@ -190,99 +182,6 @@ class DuetRRFOutputDevice(OutputDevice):
         self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - 6)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
 
-    def create_thumbnail(self, width, height):
-        scene = Application.getInstance().getController().getScene()
-        active_camera = scene.getActiveCamera()
-        render_width, render_height = active_camera.getWindowSize()
-        render_width = int(render_width)
-        render_height = int(render_height)
-        Logger.log("d", f"Found active camera with {render_width=} {render_height=}")
-
-        QCoreApplication.processEvents()
-
-        satisfied = False
-        zooms = 0
-        preview_pass = PreviewPass(render_width, render_height)
-        size = None
-        fovy = 30
-        while not satisfied and zooms < 5:
-            preview_pass.render()
-            pixel_output = preview_pass.getOutput().convertToFormat(QImage.Format_ARGB32)
-            pixel_output.save(os.path.expanduser(f"~/Downloads/foo-a-zoom-{zooms}.png"), "PNG")
-
-            min_x, max_x, min_y, max_y = Snapshot.getImageBoundaries(pixel_output)
-            size = max((max_x - min_x) / render_width, (max_y - min_y) / render_height)
-            if size > 0.5 or satisfied:
-                satisfied = True
-            else:
-                # make it big and allow for some empty space around
-                zooms += 1
-                fovy *= 0.75
-                projection_matrix = Matrix()
-                projection_matrix.setPerspective(fovy, render_width / render_height, 1, 500)
-                active_camera.setProjectionMatrix(projection_matrix)
-
-            Logger.log("d", f"Rendered thumbnail: {zooms=}, {size=}, {min_x=}, {max_x=}, {min_y=}, {max_y=}, {fovy=}")
-
-        # crop to content
-        pixel_output = pixel_output.copy(min_x, min_y, max_x - min_x, max_y - min_y)
-        Logger.log("d", f"Cropped thumbnail to {min_x}, {min_y}, {max_x - min_x}, {max_y - min_y}.")
-        pixel_output.save(os.path.expanduser("~/Downloads/foo-b-cropped.png"), "PNG")
-
-        # scale to desired width and height
-        pixel_output = pixel_output.scaled(
-            width, height,
-            aspectRatioMode=QtCore.Qt.KeepAspectRatio,
-            transformMode=QtCore.Qt.SmoothTransformation
-        )
-        Logger.log("d", f"Scaled thumbnail to {width=}, {height=}.")
-        pixel_output.save(os.path.expanduser("~/Downloads/foo-c-scaled.png"), "PNG")
-
-        # center image within desired width and height if one dimension is too small
-        if pixel_output.width() < width:
-            d = (width - pixel_output.width()) / 2.
-            pixel_output = pixel_output.copy(-d, 0, width, pixel_output.height())
-            Logger.log("d", f"Centered thumbnail horizontally {d=}.")
-        if pixel_output.height() < height:
-            d = (height - pixel_output.height()) / 2.
-            pixel_output = pixel_output.copy(0, -d, pixel_output.width(), height)
-            Logger.log("d", f"Centered thumbnail vertically {d=}.")
-        pixel_output.save(os.path.expanduser("~/Downloads/foo-d-aspect-fixed.png"), "PNG")
-
-        Logger.log("d", "Successfully created thumbnail of scene.")
-        return pixel_output
-
-    def embed_thumbnail(self):
-        Logger.log("d", "Creating thumbnail in QOI format to include in gcode file...")
-        try:
-            # thumbnail = Snapshot.snapshot(width, height)
-
-            # PanelDue: 480×272 (4.3" displays) or 800×480 pixels (5" and 7" displays)
-
-            width = 320
-            height = 320
-            thumbnail = self.create_thumbnail(width, height)
-
-            # https://qoiformat.org/qoi-specification.pdf
-            pixels = [thumbnail.pixel(x, y) for y in range(height) for x in range(width)]
-            pixels = [(unsigned_p ^ (1 << 31)) - (1 << 31) for unsigned_p in pixels]
-            encoder = QOIEncoder()
-            r = encoder.encode(width, height, pixels, alpha=thumbnail.hasAlphaChannel(), linear_colorspace=False)
-            if not r:
-                raise ValueError("image size unsupported")
-
-            Logger.log("d", "Successfully encoded thumbnail in QOI format.")
-
-            thumbnail.save(os.path.expanduser("~/Downloads/snapshot.png"), "PNG")
-            with open(os.path.expanduser("~/Downloads/snapshot.qoi"), "wb") as f:
-                actual_size = encoder.get_encoded_size()
-                f.write(encoder.get_encoded()[:actual_size])
-        except Exception as e:
-            Logger.log("d", "failed to create snapshot: " + str(e))
-            import traceback
-            Logger.log("d", traceback.format_stack())
-            # continue without the QOI snapshot
-
     def onFilenameChanged(self):
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
 
@@ -309,14 +208,12 @@ class DuetRRFOutputDevice(OutputDevice):
 
         self._dialog.deleteLater()
 
-        # create the temp file for the gcode
-        self._stream = StringIO()
         self._stage = OutputStage.writing
         self.writeStarted.emit(self)
 
         # show a progress message
         self._message = Message(
-            "Rendering thumbnail image...",
+            "Serializing g-code...",
             lifetime=0,
             dismissable=False,
             progress=-1,
@@ -324,19 +221,37 @@ class DuetRRFOutputDevice(OutputDevice):
         )
         self._message.show()
 
-        # generate model thumbnail and embedd in gcode file
-        self.embed_thumbnail()
-
-        self._message.setText("Uploading {} ...".format(self._fileName))
-
         # get the g-code through the GCodeWrite plugin
         # this serializes the actual scene and should produce the same output as "Save to File"
         Logger.log("d", "Loading gcode...")
         gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
-        success = gcode_writer.write(self._stream, None)
+        gcode_stream = StringIO()
+        success = gcode_writer.write(gcode_stream, None)
         if not success:
             Logger.log("e", "GCodeWrite failed.")
             return
+
+        # generate model thumbnail and embedd in gcode file
+        self._message.setText("Rendering thumbnail image...")
+        thumbnail_stream = generate_thumbnail()
+
+        self._stream = StringIO()
+        gcode_stream.seek(0)
+        for l in gcode_stream.readlines():
+            self._stream.write(l)
+            Logger.log("d", l)
+            if l.startswith(";Generated with"):
+                version = DuetRRFSettings.get_plugin_version()
+                self._stream.write(f";Exported with Cura-DuetRRF by Thomas Kriechbaumer v{version}\n")
+                if thumbnail_stream:
+                    thumbnail_stream.seek(0)
+                    self._stream.write(thumbnail_stream.read())
+
+        self._stream.seek(0)
+        with open(os.path.expanduser("~/Downloads/debug.gcode"), "w") as f:
+            f.write(self._stream.read())
+
+        self._message.setText("Uploading {} ...".format(self._fileName))
 
         # start
         Logger.log("d", "Connecting...")

@@ -3,7 +3,7 @@ import json
 
 from UM.Logger import Logger
 
-from . import DuetRRFPlugin, DuetRRFAction
+from . import DuetRRFPlugin, DuetRRFAction, DuetRRFSettings
 
 
 def getMetaData():
@@ -11,12 +11,10 @@ def getMetaData():
 
 
 def register(app):
-    plugin_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugin.json")
-    try:
-        with open(plugin_file_path) as plugin_file:
-            plugin_info = json.load(plugin_file)
-            Logger.log("d", "DuetRRFPlugin version: {}".format(plugin_info["version"]))
-    except:
+    v = DuetRRFSettings.get_plugin_version()
+    if v:
+        Logger.log("d", f"DuetRRFPlugin version: {v}")
+    else:
         Logger.log("w", "DuetRRFPlugin failed to get version information!")
 
     plugin = DuetRRFPlugin.DuetRRFPlugin()
