@@ -7,12 +7,9 @@ from io import StringIO
 from typing import cast
 from enum import Enum
 
-from PyQt5 import QtNetwork, QtCore
 from PyQt5.QtNetwork import QNetworkReply
-
-from PyQt5.QtCore import QFile, QUrl, QObject, QByteArray, QTimer, pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QUrl, QObject, QByteArray, QTimer
 from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtQml import QQmlComponent, QQmlContext
 
 from cura.CuraApplication import CuraApplication
 
@@ -33,6 +30,7 @@ from .thumbnails import generate_thumbnail
 class OutputStage(Enum):
     ready = 0
     writing = 1
+
 
 class DuetRRFDeviceType(Enum):
     print = 0
@@ -213,7 +211,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
         # show a progress message
         self._message = Message(
-            "Serializing g-code...",
+            "Serializing gcode...",
             lifetime=0,
             dismissable=False,
             progress=-1,
@@ -221,39 +219,38 @@ class DuetRRFOutputDevice(OutputDevice):
         )
         self._message.show()
 
-        # get the g-code through the GCodeWrite plugin
+        # get the gcode through the GCodeWrite plugin
         # this serializes the actual scene and should produce the same output as "Save to File"
-        Logger.log("d", "Loading gcode...")
+        Logger.log("d", "Serializing gcode...")
         gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
         gcode_stream = StringIO()
         success = gcode_writer.write(gcode_stream, None)
         if not success:
-            Logger.log("e", "GCodeWrite failed.")
+            Logger.log("e", "GCodeWriter failed.")
             return
 
         # generate model thumbnail and embedd in gcode file
         self._message.setText("Rendering thumbnail image...")
+        Logger.log("d", "Rendering thumbnail image...")
         thumbnail_stream = generate_thumbnail()
 
+        # inject custom data
+        self._message.setText("Assembling final gcode file...")
+        Logger.log("d", "Assembling final gcode file...")
         self._stream = StringIO()
         gcode_stream.seek(0)
         for l in gcode_stream.readlines():
             self._stream.write(l)
-            Logger.log("d", l)
             if l.startswith(";Generated with"):
                 version = DuetRRFSettings.get_plugin_version()
-                self._stream.write(f";Exported with Cura-DuetRRF by Thomas Kriechbaumer v{version}\n")
-                if thumbnail_stream:
-                    thumbnail_stream.seek(0)
-                    self._stream.write(thumbnail_stream.read())
+                self._stream.write(f";Exported with Cura-DuetRRF v{version} plugin by Thomas Kriechbaumer\n")
+                self._stream.write(thumbnail_stream.getvalue())
 
-        self._stream.seek(0)
-        with open(os.path.expanduser("~/Downloads/debug.gcode"), "w") as f:
-            f.write(self._stream.read())
+        # with open(os.path.expanduser("~/Downloads/debug.gcode"), "w") as f:
+        #     f.write(self._stream.getvalue())
 
+        # start upload workflow
         self._message.setText("Uploading {} ...".format(self._fileName))
-
-        # start
         Logger.log("d", "Connecting...")
         self._send('rr_connect',
             query=[("password", self._duet_password), self._timestamp()],
@@ -281,7 +278,6 @@ class DuetRRFOutputDevice(OutputDevice):
 
         Logger.log("d", "Uploading...")
 
-        self._stream.seek(0)
         self._postData = QByteArray()
         self._postData.append(self._stream.getvalue().encode())
 
@@ -516,11 +512,6 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeSuccess.emit(self)
         self._resetState()
 
-    def _onProgress(self, progress):
-        if self._message:
-            self._message.setProgress(progress)
-        self.writeProgress.emit(self, progress)
-
     def _resetState(self):
         Logger.log("d", "called")
         if self._stream:
@@ -538,7 +529,10 @@ class DuetRRFOutputDevice(OutputDevice):
 
     def _onUploadProgress(self, bytesSent, bytesTotal):
         if bytesTotal > 0:
-            self._onProgress(int(bytesSent * 100 / bytesTotal))
+            progress = int(bytesSent * 100 / bytesTotal)
+            if self._message:
+                self._message.setProgress(progress)
+            self.writeProgress.emit(self, progress)
 
     def _onNetworkError(self, reply, error):
         # https://doc.qt.io/qt-5/qnetworkreply.html#NetworkError-enum

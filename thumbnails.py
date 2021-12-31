@@ -39,7 +39,7 @@ def render_thumbnail(width, height):
     while not satisfied and zooms < 5:
         preview_pass.render()
         pixel_output = preview_pass.getOutput().convertToFormat(QImage.Format_ARGB32)
-        pixel_output.save(os.path.expanduser(f"~/Downloads/foo-a-zoom-{zooms}.png"), "PNG")
+        # pixel_output.save(os.path.expanduser(f"~/Downloads/foo-a-zoom-{zooms}.png"), "PNG")
 
         min_x, max_x, min_y, max_y = Snapshot.getImageBoundaries(pixel_output)
         size = max((max_x - min_x) / render_width, (max_y - min_y) / render_height)
@@ -58,7 +58,7 @@ def render_thumbnail(width, height):
     # crop to content
     pixel_output = pixel_output.copy(min_x, min_y, max_x - min_x, max_y - min_y)
     Logger.log("d", f"Cropped thumbnail to {min_x}, {min_y}, {max_x - min_x}, {max_y - min_y}.")
-    pixel_output.save(os.path.expanduser("~/Downloads/foo-b-cropped.png"), "PNG")
+    # pixel_output.save(os.path.expanduser("~/Downloads/foo-b-cropped.png"), "PNG")
 
     # scale to desired width and height
     pixel_output = pixel_output.scaled(
@@ -67,7 +67,7 @@ def render_thumbnail(width, height):
         transformMode=QtCore.Qt.SmoothTransformation
     )
     Logger.log("d", f"Scaled thumbnail to {width=}, {height=}.")
-    pixel_output.save(os.path.expanduser("~/Downloads/foo-c-scaled.png"), "PNG")
+    # pixel_output.save(os.path.expanduser("~/Downloads/foo-c-scaled.png"), "PNG")
 
     # center image within desired width and height if one dimension is too small
     if pixel_output.width() < width:
@@ -78,7 +78,7 @@ def render_thumbnail(width, height):
         d = (height - pixel_output.height()) / 2.
         pixel_output = pixel_output.copy(0, -d, pixel_output.width(), height)
         Logger.log("d", f"Centered thumbnail vertically {d=}.")
-    pixel_output.save(os.path.expanduser("~/Downloads/foo-d-aspect-fixed.png"), "PNG")
+    # pixel_output.save(os.path.expanduser("~/Downloads/foo-d-aspect-fixed.png"), "PNG")
 
     Logger.log("d", "Successfully created thumbnail of scene.")
     return pixel_output
@@ -88,8 +88,8 @@ def generate_thumbnail():
     Logger.log("d", "Creating thumbnail in QOI format to include in gcode file...")
     try:
         # PanelDue: 480×272 (4.3" displays) or 800×480 pixels (5" and 7" displays)
-        width = 320
-        height = 320
+        width = 270
+        height = 270
         thumbnail = render_thumbnail(width, height)
 
         # https://qoiformat.org/qoi-specification.pdf
@@ -105,15 +105,17 @@ def generate_thumbnail():
         qoi_encoded_size = encoder.get_encoded_size()
         qoi_data = encoder.get_encoded()[:qoi_encoded_size]
 
-        b64_data = base64.b64encode(qoi_data)
+        b64_data = base64.b64encode(qoi_data).decode('ascii')
         b64_encoded_size = len(b64_data)
-        thumbnail_stream.write(f"; thumbnail begin {width}x{height} {b64_encoded_size}\n")
 
+        thumbnail_stream.write(f"; thumbnail begin {width}x{height} {b64_encoded_size}\n")
         max_row_length = 78
         for i in range(0, b64_encoded_size, max_row_length):
-            s = b64_data[i:i+max_row_length].decode('ascii')
+            s = b64_data[i:i+max_row_length]
             thumbnail_stream.write(f"; {s}\n")
-        thumbnail_stream.write(f"; thumbnail end\n\n")
+        thumbnail_stream.write(f"; thumbnail end\n")
+
+        Logger.log("d", "Successfully encoded QOI thumbnail as base64 into gcode comments.")
 
         return thumbnail_stream
     except Exception as e:
