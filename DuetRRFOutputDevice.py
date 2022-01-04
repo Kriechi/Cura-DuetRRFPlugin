@@ -173,14 +173,14 @@ class DuetRRFOutputDevice(OutputDevice):
 
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'UploadFilename.qml')
         self._dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
-        self._dialog.textChanged.connect(self.onFilenameChanged)
-        self._dialog.accepted.connect(self.onFilenameAccepted)
+        self._dialog.textChanged.connect(self._onFilenameChanged)
+        self._dialog.accepted.connect(self._onFilenameAccepted)
         self._dialog.show()
         self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
         self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - 6)
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
 
-    def onFilenameChanged(self):
+    def _onFilenameChanged(self):
         fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
 
         forbidden_characters = "\"'´`<>()[]?*\,;:&%#$!"
@@ -198,7 +198,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._dialog.setProperty('validName', len(fileName) > 0)
         self._dialog.setProperty('validationError', 'Filename too short')
 
-    def onFilenameAccepted(self):
+    def _onFilenameAccepted(self):
         self._fileName = self._dialog.findChild(QObject, "nameField").property('text').strip()
         if not self._fileName.endswith('.gcode') and '.' not in self._fileName:
             self._fileName += '.gcode'
@@ -221,42 +221,51 @@ class DuetRRFOutputDevice(OutputDevice):
 
         # get the gcode through the GCodeWrite plugin
         # this serializes the actual scene and should produce the same output as "Save to File"
-        Logger.log("d", "Serializing gcode...")
-        gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
-        gcode_stream = StringIO()
-        success = gcode_writer.write(gcode_stream, None)
-        if not success:
-            Logger.log("e", "GCodeWriter failed.")
-            return
+        gcode_stream = self._serializing_scene_to_gcode()
 
         # generate model thumbnail and embedd in gcode file
         self._message.setText("Rendering thumbnail image...")
-        Logger.log("d", "Rendering thumbnail image...")
         thumbnail_stream = generate_thumbnail()
 
-        # inject custom data
+        # assemble everything and inject custom data
         self._message.setText("Assembling final gcode file...")
-        Logger.log("d", "Assembling final gcode file...")
-        self._stream = StringIO()
-        gcode_stream.seek(0)
-        for l in gcode_stream.readlines():
-            self._stream.write(l)
-            if l.startswith(";Generated with"):
-                version = DuetRRFSettings.get_plugin_version()
-                self._stream.write(f";Exported with Cura-DuetRRF v{version} plugin by Thomas Kriechbaumer\n")
-                self._stream.write(thumbnail_stream.getvalue())
-
-        # with open(os.path.expanduser("~/Downloads/debug.gcode"), "w") as f:
-        #     f.write(self._stream.getvalue())
+        self._stream = self._assemble_final_gcode(gcode_stream, thumbnail_stream)
 
         # start upload workflow
         self._message.setText("Uploading {} ...".format(self._fileName))
         Logger.log("d", "Connecting...")
         self._send('rr_connect',
             query=[("password", self._duet_password), self._timestamp()],
-            next_stage=self.onUploadReady,
+            next_stage=self._onUploadReady,
             on_error=self._check_duet3_sbc,
         )
+
+    def _serializing_scene_to_gcode(self):
+        Logger.log("d", "Serializing gcode...")
+        gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
+        gcode_stream = StringIO()
+        success = gcode_writer.write(gcode_stream, None)
+        if not success:
+            Logger.log("e", "GCodeWriter failed.")
+            return None
+        return gcode_stream
+
+    def _assemble_final_gcode(self, gcode_stream, thumbnail_stream):
+        Logger.log("d", "Assembling final gcode file...")
+
+        final_stream = StringIO()
+        gcode_stream.seek(0)
+        for l in gcode_stream.readlines():
+            final_stream.write(l)
+            if l.startswith(";Generated with"):
+                version = DuetRRFSettings.get_plugin_version()
+                final_stream.write(f";Exported with Cura-DuetRRF v{version} plugin by Thomas Kriechbaumer\n")
+                final_stream.write(thumbnail_stream.getvalue())
+
+        with open(os.path.expanduser("~/Downloads/debug.gcode"), "w") as f:
+            f.write(final_stream.getvalue())
+
+        return final_stream
 
     def _check_duet3_sbc(self, reply, error):
         Logger.log("d", "rr_connect failed with error " + str(error))
@@ -264,12 +273,12 @@ class DuetRRFOutputDevice(OutputDevice):
             Logger.log("d", "error indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
             self._use_rrf_http_api = False  # let's try the newer DuetSoftwareFramework for Duet3+SBC API instead
             self._send('machine/status',
-                next_stage=self.onUploadReady
+                next_stage=self._onUploadReady
             )
         else:
             self._onNetworkError(reply, error)
 
-    def onUploadReady(self, reply):
+    def _onUploadReady(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
@@ -284,17 +293,17 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._use_rrf_http_api:
             self._send('rr_upload',
                 query=[("name", "0:/gcodes/" + self._fileName), self._timestamp()],
-                next_stage=self.onUploadDone,
+                next_stage=self._onUploadDone,
                 data=self._postData,
             )
         else:
             self._send('machine/file/gcodes/' + self._fileName,
-                next_stage=self.onUploadDone,
+                next_stage=self._onUploadDone,
                 data=self._postData,
                 method='PUT',
             )
 
-    def onUploadDone(self, reply):
+    def _onUploadDone(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
@@ -326,15 +335,15 @@ class DuetRRFOutputDevice(OutputDevice):
             if self._use_rrf_http_api:
                 self._send('rr_gcode',
                     query=[("gcode", gcode)],
-                    next_stage=self.onSimulationPrintStarted,
+                    next_stage=self._onSimulationPrintStarted,
                 )
             else:
                 self._send('machine/code',
                     data=gcode.encode(),
-                    next_stage=self.onSimulationPrintStarted,
+                    next_stage=self._onSimulationPrintStarted,
                 )
         elif self._device_type == DuetRRFDeviceType.print:
-            self.onReadyToPrint()
+            self._onReadyToPrint()
         elif self._device_type == DuetRRFDeviceType.upload:
             if self._use_rrf_http_api:
                 self._send('rr_disconnect')
@@ -354,7 +363,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self.writeSuccess.emit(self)
             self._resetState()
 
-    def onReadyToPrint(self):
+    def _onReadyToPrint(self):
         if self._stage != OutputStage.writing:
             return
 
@@ -365,15 +374,15 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._use_rrf_http_api:
             self._send('rr_gcode',
                 query=[("gcode", gcode)],
-                next_stage=self.onPrintStarted,
+                next_stage=self._onPrintStarted,
             )
         else:
             self._send('machine/code',
                 data=gcode.encode(),
-                next_stage=self.onPrintStarted,
+                next_stage=self._onPrintStarted,
             )
 
-    def onPrintStarted(self, reply):
+    def _onPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
@@ -400,7 +409,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self.writeSuccess.emit(self)
         self._resetState()
 
-    def onSimulationPrintStarted(self, reply):
+    def _onSimulationPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
@@ -410,9 +419,9 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", "Simulation print started for file " + self._fileName)
 
         # give it some to start the simulation
-        QTimer.singleShot(2000, self.onCheckStatus)
+        QTimer.singleShot(2000, self._onCheckStatus)
 
-    def onCheckStatus(self):
+    def _onCheckStatus(self):
         if self._stage != OutputStage.writing:
             return
 
@@ -421,14 +430,14 @@ class DuetRRFOutputDevice(OutputDevice):
         if self._use_rrf_http_api:
             self._send('rr_status',
                 query=[("type", "3")],
-                next_stage=self.onStatusReceived,
+                next_stage=self._onStatusReceived,
             )
         else:
             self._send('machine/status',
-                next_stage=self.onStatusReceived,
+                next_stage=self._onStatusReceived,
             )
 
-    def onStatusReceived(self, reply):
+    def _onStatusReceived(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
@@ -451,7 +460,7 @@ class DuetRRFOutputDevice(OutputDevice):
             # still simulating
             if self._message and "fractionPrinted" in status:
                 self._message.setProgress(float(status["fractionPrinted"]))
-            QTimer.singleShot(1000, self.onCheckStatus)
+            QTimer.singleShot(1000, self._onCheckStatus)
         else:
             Logger.log("d", "Simulation print finished")
 
@@ -460,15 +469,15 @@ class DuetRRFOutputDevice(OutputDevice):
             if self._use_rrf_http_api:
                 self._send('rr_gcode',
                     query=[("gcode", gcode)],
-                    next_stage=self.onM37Reported,
+                    next_stage=self._onM37Reported,
                 )
             else:
                 self._send('machine/code',
                     data=gcode.encode(),
-                    next_stage=self.onReported,
+                    next_stage=self._onReported,
                 )
 
-    def onM37Reported(self, reply):
+    def _onM37Reported(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:
@@ -480,10 +489,10 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", "M37 gcode reply | " + reply_body)
 
         self._send('rr_reply',
-            next_stage=self.onReported,
+            next_stage=self._onReported,
         )
 
-    def onReported(self, reply):
+    def _onReported(self, reply):
         if self._stage != OutputStage.writing:
             return
         if reply.error() != QNetworkReply.NoError:

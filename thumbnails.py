@@ -4,24 +4,20 @@ import traceback
 from io import StringIO
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QFile, QUrl, QObject, QCoreApplication
-from PyQt5.QtGui import QDesktopServices, QImage
+from PyQt5.QtCore import QCoreApplication, QBuffer
+from PyQt5.QtGui import QImage
 
 from UM.Application import Application
 from UM.Logger import Logger
 from UM.Math.Matrix import Matrix
-from UM.Math.Vector import Vector
-from UM.Scene.Camera import Camera
-from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
-from cura.CuraApplication import CuraApplication
 from cura.Snapshot import Snapshot
 from cura.PreviewPass import PreviewPass
 
 from .qoi import QOIEncoder
 
 
-def render_thumbnail(width, height):
+def render_scene():
     scene = Application.getInstance().getController().getScene()
     active_camera = scene.getActiveCamera()
     render_width, render_height = active_camera.getWindowSize()
@@ -31,11 +27,10 @@ def render_thumbnail(width, height):
 
     QCoreApplication.processEvents()
 
+    preview_pass = PreviewPass(render_width, render_height)
+    fovy = 30
     satisfied = False
     zooms = 0
-    preview_pass = PreviewPass(render_width, render_height)
-    size = None
-    fovy = 30
     while not satisfied and zooms < 5:
         preview_pass.render()
         pixel_output = preview_pass.getOutput().convertToFormat(QImage.Format_ARGB32)
@@ -60,6 +55,11 @@ def render_thumbnail(width, height):
     Logger.log("d", f"Cropped thumbnail to {min_x}, {min_y}, {max_x - min_x}, {max_y - min_y}.")
     # pixel_output.save(os.path.expanduser("~/Downloads/foo-b-cropped.png"), "PNG")
 
+    Logger.log("d", "Successfully rendered scene.")
+    return pixel_output
+
+
+def render_thumbnail(pixel_output, width, height):
     # scale to desired width and height
     pixel_output = pixel_output.scaled(
         width, height,
@@ -80,40 +80,60 @@ def render_thumbnail(width, height):
         Logger.log("d", f"Centered thumbnail vertically {d=}.")
     # pixel_output.save(os.path.expanduser("~/Downloads/foo-d-aspect-fixed.png"), "PNG")
 
-    Logger.log("d", "Successfully created thumbnail of scene.")
+    Logger.log("d", f"Successfully rendered {width}x{height} thumbnail.")
     return pixel_output
+
+def encode_as_qoi(thumbnail):
+    # https://qoiformat.org/qoi-specification.pdf
+    pixels = [thumbnail.pixel(x, y) for y in range(thumbnail.height()) for x in range(thumbnail.width())]
+    pixels = [(unsigned_p ^ (1 << 31)) - (1 << 31) for unsigned_p in pixels]
+    encoder = QOIEncoder()
+    r = encoder.encode(
+        width=thumbnail.width(),
+        height=thumbnail.height(),
+        pixels=pixels,
+        alpha=thumbnail.hasAlphaChannel(),
+        linear_colorspace=False
+    )
+    if not r:
+        raise ValueError("image size unsupported")
+    Logger.log("d", f"Successfully encoded {thumbnail.width()}x{thumbnail.height()} thumbnail in QOI format.")
+
+    size = encoder.get_encoded_size()
+    return encoder.get_encoded()[:size]
+
+def encode_as_png(thumbnail):
+    buffer = QBuffer()
+    buffer.open(QBuffer.ReadWrite)
+    thumbnail.save(buffer, "PNG")
+    buffer.close()
+    return buffer.data()
 
 def generate_thumbnail():
     thumbnail_stream = StringIO()
-    Logger.log("d", "Creating thumbnail in QOI format to include in gcode file...")
+    Logger.log("d", "Rendering thumbnail image...")
     try:
+        scene = render_scene()
+
         # PanelDue: 480×272 (4.3" displays) or 800×480 pixels (5" and 7" displays)
-        width = 270
-        height = 270
-        thumbnail = render_thumbnail(width, height)
+        thumbnail_sizes = [
+            (32, 32),
+            (64, 64),
+            (128, 128),
+            (256, 256),
+        ]
+        for width, height in thumbnail_sizes:
+            thumbnail = render_thumbnail(scene, width, height)
+            qoi_data = encode_as_qoi(thumbnail)
+            b64_data = base64.b64encode(qoi_data).decode('ascii')
+            b64_encoded_size = len(b64_data)
 
-        # https://qoiformat.org/qoi-specification.pdf
-        pixels = [thumbnail.pixel(x, y) for y in range(height) for x in range(width)]
-        pixels = [(unsigned_p ^ (1 << 31)) - (1 << 31) for unsigned_p in pixels]
-        encoder = QOIEncoder()
-        r = encoder.encode(width, height, pixels, alpha=thumbnail.hasAlphaChannel(), linear_colorspace=False)
-        if not r:
-            raise ValueError("image size unsupported")
-
-        Logger.log("d", "Successfully encoded thumbnail in QOI format.")
-
-        qoi_encoded_size = encoder.get_encoded_size()
-        qoi_data = encoder.get_encoded()[:qoi_encoded_size]
-
-        b64_data = base64.b64encode(qoi_data).decode('ascii')
-        b64_encoded_size = len(b64_data)
-
-        thumbnail_stream.write(f"; thumbnail begin {width}x{height} {b64_encoded_size}\n")
-        max_row_length = 78
-        for i in range(0, b64_encoded_size, max_row_length):
-            s = b64_data[i:i+max_row_length]
-            thumbnail_stream.write(f"; {s}\n")
-        thumbnail_stream.write(f"; thumbnail end\n")
+            thumbnail_stream.write(f"; QOI thumbnail begin {width}x{height} {b64_encoded_size}\n")
+            max_row_length = 78
+            for i in range(0, b64_encoded_size, max_row_length):
+                s = b64_data[i:i+max_row_length]
+                thumbnail_stream.write(f"; {s}\n")
+            thumbnail_stream.write(f"; thumbnail end\n")
 
         Logger.log("d", "Successfully encoded QOI thumbnail as base64 into gcode comments.")
 
