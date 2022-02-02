@@ -128,14 +128,14 @@ def generate_thumbnail():
             b64_data = base64.b64encode(qoi_data).decode('ascii')
             b64_encoded_size = len(b64_data)
 
-            thumbnail_stream.write(f"; QOI thumbnail begin {width}x{height} {b64_encoded_size}\n")
+            thumbnail_stream.write(f"; thumbnail_QOI begin {width}x{height} {b64_encoded_size}\n")
             max_row_length = 78
             for i in range(0, b64_encoded_size, max_row_length):
                 s = b64_data[i:i+max_row_length]
                 thumbnail_stream.write(f"; {s}\n")
-            thumbnail_stream.write(f"; thumbnail end\n")
+            thumbnail_stream.write(f"; thumbnail_QOI end\n")
 
-        Logger.log("d", "Successfully encoded QOI thumbnail as base64 into gcode comments.")
+        Logger.log("d", "Successfully encoded thumbnails as base64 into gcode comments.")
 
         return thumbnail_stream
     except Exception as e:
