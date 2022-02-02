@@ -21,10 +21,10 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Version Information**
- - Operating System: [e.g. Windows 10, macOS 10.15.2, or Ubuntu 20.04]
- - Cura Version: [e.g. 4.6.1]
- - Cura-DuetRRFPlugin Version and Installation: [e.g. 1.0.6 installed via Marketplace, or git-master]
- - Duet RepRapFirmware Version: [e.g. 3.1.1, check with `M122`]
+ - Operating System: [e.g., Windows 10, macOS 10.15.2, or Ubuntu 20.04]
+ - Cura Version: [e.g., 4.6.1]
+ - Cura-DuetRRF Plugin Version and Installation: [e.g., 1.0.6 installed via Marketplace, or git-master]
+ - Duet RepRapFirmware Version: [e.g., 3.1.1, check with `M122`]
 
 **Cura Log**
 Based on your Cura version, please drag&drop the log file into the issue, or copy&paste all lines with `DuetRRFPlugin`:
