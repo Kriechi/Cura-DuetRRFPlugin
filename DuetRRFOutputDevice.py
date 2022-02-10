@@ -262,9 +262,6 @@ class DuetRRFOutputDevice(OutputDevice):
                 final_stream.write(f";Exported with Cura-DuetRRF v{version} plugin by Thomas Kriechbaumer\n")
                 final_stream.write(thumbnail_stream.getvalue())
 
-        with open(os.path.expanduser("~/Downloads/debug.gcode"), "w") as f:
-            f.write(final_stream.getvalue())
-
         return final_stream
 
     def _check_duet3_sbc(self, reply, error):
