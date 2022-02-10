@@ -116,10 +116,11 @@ def generate_thumbnail():
         scene = render_scene()
 
         # PanelDue: 480×272 (4.3" displays) or 800×480 pixels (5" and 7" displays)
+        # ref https://forum.duet3d.com/post/270550 and https://forum.duet3d.com/post/270553
         thumbnail_sizes = [
-            (32, 32),
-            (64, 64),
+            (48, 48),
             (128, 128),
+            (160, 160),
             (256, 256),
         ]
         for width, height in thumbnail_sizes:
