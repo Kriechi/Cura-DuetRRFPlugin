@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## unreleased
+  * upgrade to QtControls 2, because Cura will upgrade to Qt 6 which removes QtControls 1.
+
 ## v1.2.5: 2022-02-11
   * bump compatibility for Cura 4.13 / API 7.9, oldest supported release is now 4.11 / 7.7
   * embed QOI thumbnail images of the sliced scene into the uploaded gcode file

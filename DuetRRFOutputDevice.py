@@ -177,7 +177,7 @@ class DuetRRFOutputDevice(OutputDevice):
         self._dialog.accepted.connect(self._onFilenameAccepted)
         self._dialog.show()
         self._dialog.findChild(QObject, "nameField").setProperty('text', self._fileName)
-        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - 6)
+        self._dialog.findChild(QObject, "nameField").select(0, len(self._fileName) - len(".gcode"))
         self._dialog.findChild(QObject, "nameField").setProperty('focus', True)
 
     def _onFilenameChanged(self):
