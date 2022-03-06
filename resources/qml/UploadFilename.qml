@@ -1,9 +1,10 @@
-import QtQuick 2.1
-import QtQuick.Controls 1.1
+import QtQuick 2.10
+import QtQuick.Controls 2.1
 import QtQuick.Dialogs 1.2
-import QtQuick.Window 2.1
+import QtQuick.Window 2.2
 
-import UM 1.1 as UM
+import UM 1.5 as UM
+import Cura 1.1 as Cura
 
 UM.Dialog
 {
@@ -29,37 +30,56 @@ UM.Dialog
         nameField.focus = true;
     }
 
+    margin: UM.Theme.getSize("default_margin").width
+    buttonSpacing: UM.Theme.getSize("default_margin").width
+
     Column {
         anchors.fill: parent;
 
-        TextField {
-            objectName: "nameField";
-            id: nameField;
-            width: parent.width;
-            text: base.object;
-            maximumLength: 100;
-            onTextChanged: base.textChanged(text);
-            Keys.onReturnPressed: { if (base.validName) base.accept(); }
-            Keys.onEnterPressed: { if (base.validName) base.accept(); }
-            Keys.onEscapePressed: base.reject();
+        UM.Label {
+            text: "Enter the filename for uploading, use forward slashes (/) as directory separator if needed:"
+            width: parent.width
+            wrapMode: Text.WordWrap
         }
 
-        Label {
-            visible: !base.validName;
-            text: base.validationError;
+        TextField {
+            objectName: "nameField"
+            id: nameField
+            width: parent.width
+            text: base.object
+            maximumLength: 100
+            selectByMouse: true
+            onTextChanged: base.textChanged(text)
+            Keys.onReturnPressed: { if (base.validName) base.accept(); }
+            Keys.onEnterPressed: { if (base.validName) base.accept(); }
+            Keys.onEscapePressed: base.reject()
+        }
+
+        UM.Label {
+            visible: !base.validName
+            text: base.validationError
+        }
+    }
+
+    Item
+    {
+        ButtonGroup {
+            buttons: [cancelButton, okButton]
+            checkedButton: okButton
         }
     }
 
     rightButtons: [
-        Button {
-            text: catalog.i18nc("@action:button", "Cancel");
-            onClicked: base.reject();
+        Cura.PrimaryButton {
+            id: okButton
+            text: catalog.i18nc("@action:button", "OK")
+            onClicked: base.accept()
+            enabled: base.validName
         },
-        Button {
-            text: catalog.i18nc("@action:button", "OK");
-            onClicked: base.accept();
-            enabled: base.validName;
-            isDefault: true;
+        Cura.SecondaryButton {
+            id: cancelButton
+            text: catalog.i18nc("@action:button", "Cancel")
+            onClicked: base.reject()
         }
     ]
 }
