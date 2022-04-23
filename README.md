@@ -34,7 +34,8 @@ specific folder:
 
 Be careful, the unzipper often tacks on the name of the zip as a folder at the
 bottom and you don't want it nested.  You want the files to show up in that
-folder.
+folder. On linux and macOS, use `zip -j <path/to/downloaded/zipfile>` to skip
+creation of the exraneous folder.
 
 Make sure that the plugin folder name is a listed above and it does not have any
 trailing version numbers (`-1.0.0`) or similar.
