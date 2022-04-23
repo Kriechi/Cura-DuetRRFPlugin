@@ -7,9 +7,9 @@ from io import StringIO
 from typing import cast
 from enum import Enum
 
-from PyQt5.QtNetwork import QNetworkReply
-from PyQt5.QtCore import QUrl, QObject, QByteArray, QTimer
-from PyQt5.QtGui import QDesktopServices
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtCore import QUrl, QObject, QByteArray, QTimer
+from PyQt6.QtGui import QDesktopServices
 
 from cura.CuraApplication import CuraApplication
 
@@ -266,7 +266,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
     def _check_duet3_sbc(self, reply, error):
         Logger.log("d", "rr_connect failed with error " + str(error))
-        if error == QNetworkReply.ContentNotFoundError:
+        if error == QNetworkReply.NetworkError.ContentNotFoundError:
             Logger.log("d", "error indicates Duet3+SBC - let's try the DuetSoftwareFramework API instead...")
             self._use_rrf_http_api = False  # let's try the newer DuetSoftwareFramework for Duet3+SBC API instead
             self._send('machine/status',
@@ -278,7 +278,7 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onUploadReady(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
@@ -303,7 +303,7 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onUploadDone(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
@@ -382,7 +382,7 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
@@ -409,7 +409,7 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onSimulationPrintStarted(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
@@ -437,13 +437,13 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onStatusReceived(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
         Logger.log("d", "Status received - decoding...")
         reply_body = bytes(reply.readAll()).decode()
-        Logger.log("d", "Status: " + reply_body)
+        # Logger.log("d", "Status: " + reply_body)
 
         status = json.loads(reply_body)
         if self._use_rrf_http_api:
@@ -451,13 +451,29 @@ class DuetRRFOutputDevice(OutputDevice):
             # RRF 1.21RC3 and later uses M while simulating
             busy = status["status"] in ['P', 'M']
         else:
-            busy = status["result"]["state"]["status"] == 'simulating'
+            s = status.get("state", {}).get("status", None)
+            if not s:
+                # we might not have received a full status report, assume we are still simulating and busy
+                busy = True
+            else:
+                busy = s == 'simulating'
+
+        progress = 0.0
+        try:
+            if "fractionPrinted" in status:
+                progress = float(status["fractionPrinted"])
+            else:
+                file_size = status.get("job", {}).get("file", {}).get("size", None)
+                file_position = status.get("job", {}).get("filePosition", 0)
+                progress = int(file_position) / int(file_size) * 100.0
+        except:
+            pass
 
         if busy:
             # still simulating
-            if self._message and "fractionPrinted" in status:
-                self._message.setProgress(float(status["fractionPrinted"]))
-            QTimer.singleShot(1000, self._onCheckStatus)
+            if self._message:
+                self._message.setProgress(progress)
+            QTimer.singleShot(2000, self._onCheckStatus)
         else:
             Logger.log("d", "Simulation print finished")
 
@@ -477,7 +493,7 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onM37Reported(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
@@ -492,7 +508,7 @@ class DuetRRFOutputDevice(OutputDevice):
     def _onReported(self, reply):
         if self._stage != OutputStage.writing:
             return
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             Logger.log("d", "Stopping due to reply error: " + reply.error())
             return
 
@@ -541,7 +557,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self.writeProgress.emit(self, progress)
 
     def _onNetworkError(self, reply, error):
-        # https://doc.qt.io/qt-5/qnetworkreply.html#NetworkError-enum
+        # https://doc.qt.io/qt-6/qnetworkreply.html#NetworkError-enum
         Logger.log("e", repr(error))
         if self._message:
             self._message.hide()
