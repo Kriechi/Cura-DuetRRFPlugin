@@ -1,6 +1,6 @@
 import json
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt6.QtCore import QTimer
 
 from cura.CuraApplication import CuraApplication
 from cura.Settings.CuraContainerRegistry import CuraContainerRegistry

@@ -1,6 +1,6 @@
 import QtQuick 2.10
 import QtQuick.Controls 2.3
-import QtQuick.Layouts 1.2
+import QtQuick.Layouts 2.7
 import QtQuick.Window 2.2
 
 import UM 1.5 as UM
@@ -10,8 +10,12 @@ import Cura 1.1 as Cura
 Cura.MachineAction
 {
     id: base;
+    anchors.fill: parent;
 
     property var finished: manager.finished
+    property var selectedInstance: null
+    property bool validUrl: true;
+
     onFinishedChanged: if(manager.finished) {completed()}
 
     function reset()
@@ -19,22 +23,21 @@ Cura.MachineAction
         manager.reset()
     }
 
-    anchors.fill: parent;
-    property var selectedInstance: null
-
-    property bool validUrl: true;
-
     Component.onCompleted: {
         actionDialog.minimumWidth = screenScaleFactor * 500;
-        actionDialog.minimumHeight = screenScaleFactor * 255;
-        actionDialog.maximumWidth = screenScaleFactor * 500;
-        actionDialog.maximumHeight = screenScaleFactor * 255;
+        actionDialog.minimumHeight = screenScaleFactor * 300;
     }
 
     Column {
-        anchors.fill: parent
+        spacing: UM.Theme.getSize("thin_margin").height;
+        anchors {
+            fill: parent;
+            leftMargin: UM.Theme.getSize("thin_margin").width;
+            rightMargin: UM.Theme.getSize("thin_margin").width;
+            top: parent.top;
+            topMargin: UM.Theme.getSize("thin_margin").height;
+        }
 
-        Item { width: parent.width; }
         UM.Label {
             text: catalog.i18nc("@label", "Duet Address (URL)")
         }
@@ -50,7 +53,6 @@ Cura.MachineAction
             }
         }
 
-        Item { width: parent.width; }
         UM.Label {
             text: catalog.i18nc("@label", "Duet Password (if you used M551)")
         }
@@ -63,7 +65,6 @@ Cura.MachineAction
             anchors.right: parent.right
         }
 
-        Item { width: parent.width; }
         UM.Label {
             text: catalog.i18nc("@label", "HTTP Basic Auth: user (if you run a reverse proxy)")
         }
@@ -76,7 +77,6 @@ Cura.MachineAction
             anchors.right: parent.right
         }
 
-        Item { width: parent.width; }
         UM.Label {
             text: catalog.i18nc("@label", "HTTP Basic Auth: password (if you run a reverse proxy)")
         }
@@ -89,16 +89,21 @@ Cura.MachineAction
             anchors.right: parent.right
         }
 
-        Item { width: parent.width; }
-        UM.Label {
-            visible: !base.validUrl
-            text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.42/")
-            color: "red"
+        Item {
+            width: errorMsgLabel.implicitWidth
+            height: errorMsgLabel.implicitHeight
+            UM.Label {
+                id: errorMsgLabel
+                visible: !base.validUrl
+                text: catalog.i18nc("@error", "URL not valid. Example: http://192.168.1.42/")
+                color: "red"
+                Layout.fillWidth: true
+            }
         }
 
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            width: childrenRect.width
+            width: parent.width
             spacing: UM.Theme.getSize("default_margin").width
 
             Cura.PrimaryButton {

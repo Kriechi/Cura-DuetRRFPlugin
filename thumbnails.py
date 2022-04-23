@@ -1,11 +1,10 @@
-import os
 import base64
 import traceback
 from io import StringIO
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import QCoreApplication, QBuffer
-from PyQt5.QtGui import QImage
+from PyQt6 import QtCore
+from PyQt6.QtCore import QCoreApplication, QBuffer
+from PyQt6.QtGui import QImage
 
 from UM.Application import Application
 from UM.Logger import Logger
@@ -33,7 +32,7 @@ def render_scene():
     zooms = 0
     while not satisfied and zooms < 5:
         preview_pass.render()
-        pixel_output = preview_pass.getOutput().convertToFormat(QImage.Format_ARGB32)
+        pixel_output = preview_pass.getOutput().convertToFormat(QImage.Format.Format_ARGB32)
         # pixel_output.save(os.path.expanduser(f"~/Downloads/foo-a-zoom-{zooms}.png"), "PNG")
 
         min_x, max_x, min_y, max_y = Snapshot.getImageBoundaries(pixel_output)
@@ -63,19 +62,19 @@ def render_thumbnail(pixel_output, width, height):
     # scale to desired width and height
     pixel_output = pixel_output.scaled(
         width, height,
-        aspectRatioMode=QtCore.Qt.KeepAspectRatio,
-        transformMode=QtCore.Qt.SmoothTransformation
+        aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+        transformMode=QtCore.Qt.TransformationMode.SmoothTransformation
     )
     Logger.log("d", f"Scaled thumbnail to {width=}, {height=}.")
     # pixel_output.save(os.path.expanduser("~/Downloads/foo-c-scaled.png"), "PNG")
 
     # center image within desired width and height if one dimension is too small
     if pixel_output.width() < width:
-        d = (width - pixel_output.width()) / 2.
+        d = int((width - pixel_output.width()) / 2.)
         pixel_output = pixel_output.copy(-d, 0, width, pixel_output.height())
         Logger.log("d", f"Centered thumbnail horizontally {d=}.")
     if pixel_output.height() < height:
-        d = (height - pixel_output.height()) / 2.
+        d = int((height - pixel_output.height()) / 2.)
         pixel_output = pixel_output.copy(0, -d, pixel_output.width(), height)
         Logger.log("d", f"Centered thumbnail vertically {d=}.")
     # pixel_output.save(os.path.expanduser("~/Downloads/foo-d-aspect-fixed.png"), "PNG")
