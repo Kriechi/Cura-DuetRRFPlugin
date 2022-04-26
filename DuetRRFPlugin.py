@@ -1,6 +1,9 @@
 import json
 
-from PyQt6.QtCore import QTimer
+try: # Cura 5
+    from PyQt6.QtCore import QTimer
+except: # Cura 4
+    from PyQt5.QtCore import QTimer
 
 from cura.CuraApplication import CuraApplication
 from cura.Settings.CuraContainerRegistry import CuraContainerRegistry

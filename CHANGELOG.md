@@ -1,5 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.7: 2022-04-26
+* bump compatibility for Cura 5.0 / API 8.0, while retaining compatibility with Cura 4.11 / 7.7 and up
+
 ## v1.2.6: 2022-04-23
 * bump compatibility for Cura 5.0 / API 8.0, for older Cura versions, please use plugin v1.2.5 or older
 * fixed simulation progress reports

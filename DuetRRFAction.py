@@ -1,8 +1,12 @@
 import os
 import re
+import sys
 from typing import Optional
 
-from PyQt6.QtCore import QObject, pyqtSlot, pyqtProperty, pyqtSignal
+try: # Cura 5
+    from PyQt6.QtCore import QObject, pyqtSlot, pyqtProperty, pyqtSignal
+except: # Cura 4
+    from PyQt5.QtCore import QObject, pyqtSlot, pyqtProperty, pyqtSignal
 
 from cura.CuraApplication import CuraApplication
 from cura.MachineAction import MachineAction
@@ -20,7 +24,10 @@ class DuetRRFAction(MachineAction):
     def __init__(self, parent: QObject = None) -> None:
         super().__init__("DuetRRFAction", catalog.i18nc("@action", "Connect Duet RepRapFirmware"))
 
-        self._qml_url = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'DuetRRFAction.qml')
+        extra_path = ""
+        if "PyQt5" in sys.modules: # Cura 4
+            extra_path = "legacy"
+        self._qml_url = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', extra_path, 'DuetRRFAction.qml')
 
         self._application = CuraApplication.getInstance()
         self._application.globalContainerStackChanged.connect(self._onGlobalContainerStackChanged)

@@ -1,3 +1,4 @@
+import sys
 import os.path
 import datetime
 import urllib
@@ -7,9 +8,14 @@ from io import StringIO
 from typing import cast
 from enum import Enum
 
-from PyQt6.QtNetwork import QNetworkReply
-from PyQt6.QtCore import QUrl, QObject, QByteArray, QTimer
-from PyQt6.QtGui import QDesktopServices
+try: # Cura 5
+    from PyQt6.QtNetwork import QNetworkReply
+    from PyQt6.QtCore import QUrl, QObject, QByteArray, QTimer
+    from PyQt6.QtGui import QDesktopServices
+except: # Cura 4
+    from PyQt5.QtNetwork import QNetworkReply
+    from PyQt5.QtCore import QUrl, QObject, QByteArray, QTimer
+    from PyQt5.QtGui import QDesktopServices
 
 from cura.CuraApplication import CuraApplication
 
@@ -171,7 +177,11 @@ class DuetRRFOutputDevice(OutputDevice):
             fileName = "%s.gcode" % Application.getInstance().getPrintInformation().jobName
         self._fileName = fileName
 
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', 'UploadFilename.qml')
+        extra_path = ""
+        if "PyQt5" in sys.modules: # Cura 4
+            extra_path = "legacy"
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', 'qml', extra_path, 'UploadFilename.qml')
+
         self._dialog = CuraApplication.getInstance().createQmlComponent(path, {"manager": self})
         self._dialog.textChanged.connect(self._onFilenameChanged)
         self._dialog.accepted.connect(self._onFilenameAccepted)

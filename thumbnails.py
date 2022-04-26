@@ -2,9 +2,14 @@ import base64
 import traceback
 from io import StringIO
 
-from PyQt6 import QtCore
-from PyQt6.QtCore import QCoreApplication, QBuffer
-from PyQt6.QtGui import QImage
+try: # Cura 5
+    from PyQt6 import QtCore
+    from PyQt6.QtCore import QCoreApplication, QBuffer
+    from PyQt6.QtGui import QImage
+except: # Cura 4
+    from PyQt5 import QtCore
+    from PyQt5.QtCore import QCoreApplication, QBuffer
+    from PyQt5.QtGui import QImage
 
 from UM.Application import Application
 from UM.Logger import Logger

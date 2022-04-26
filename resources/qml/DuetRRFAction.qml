@@ -6,7 +6,6 @@ import QtQuick.Window 2.2
 import UM 1.5 as UM
 import Cura 1.1 as Cura
 
-
 Cura.MachineAction
 {
     id: base;

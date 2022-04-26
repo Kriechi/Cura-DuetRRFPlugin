@@ -1,7 +1,6 @@
 import QtQuick 2.10
 import QtQuick.Controls 2.3
 import QtQuick.Window 2.2
-import QtQuick.Dialogs
 
 import UM 1.5 as UM
 import Cura 1.1 as Cura
