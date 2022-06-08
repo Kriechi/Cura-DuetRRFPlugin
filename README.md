@@ -46,14 +46,16 @@ in the future. Use git to clone this repository into the folders given above.
 
 ## Configuration
 
-**Do NOT try to add a new "networked printer"!** This is only for Ultimaker
-printers.
 
-Duet-based printers are configured through Cura preferences for Printers:
+Duet-based printers are added and configured through Cura preferences for Printers:
 
 * Open Cura **Preferences**
+* **If using Cura 5** select **Configure Cura**
 * Select **Printers**
-* Activate and select your Duet RepRapFirmware-based printer
+* Add Duet printer by selecting **Add New**
+* Under **Add a non-networked printer** select a corresponding option for your printer type or custom if one does not exist for your printer.
+* **Do NOT try to add a new "networked printer"!** This is only for Ultimaker, Network link will happen shortly.
+* Select your Duet RepRapFirmware-based printer
 * Click on **Connect Duet RepRapFirmware**
 * Enter the URL to your controller board
   - make sure this URL works if you copy & paste it into your browser
