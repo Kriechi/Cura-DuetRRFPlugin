@@ -85,6 +85,7 @@ This button is also a dropdown to choose between **Print**, **Simulate**, or
 * Works with HTTP Basic Auth (optional)
 * Works with RRF passwords (if you used `M551`, default is `reprap`)
 * No support for UNC paths, only IP addresses or resolvable domain names (DNS)
+* Embeds thumbnails in QOI format for PanelDue and DWC
 
 ## Use
 

@@ -22,16 +22,13 @@ from cura.CuraApplication import CuraApplication
 from UM.Application import Application
 from UM.Logger import Logger
 from UM.Message import Message
-from UM.Mesh.MeshWriter import MeshWriter
-from UM.PluginRegistry import PluginRegistry
 from UM.OutputDevice.OutputDevice import OutputDevice
 from UM.OutputDevice import OutputDeviceError
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
 from . import DuetRRFSettings
-from .thumbnails import generate_thumbnail
-
+from .helpers import serializing_scene_to_gcode
 
 class OutputStage(Enum):
     ready = 0
@@ -229,17 +226,7 @@ class DuetRRFOutputDevice(OutputDevice):
         )
         self._message.show()
 
-        # get the gcode through the GCodeWrite plugin
-        # this serializes the actual scene and should produce the same output as "Save to File"
-        gcode_stream = self._serializing_scene_to_gcode()
-
-        # generate model thumbnail and embedd in gcode file
-        self._message.setText("Rendering thumbnail image...")
-        thumbnail_stream = generate_thumbnail()
-
-        # assemble everything and inject custom data
-        self._message.setText("Assembling final gcode file...")
-        self._stream = self._assemble_final_gcode(gcode_stream, thumbnail_stream)
+        self._stream = serializing_scene_to_gcode()
 
         # start upload workflow
         self._message.setText("Uploading {} ...".format(self._fileName))
@@ -249,30 +236,6 @@ class DuetRRFOutputDevice(OutputDevice):
             next_stage=self._onUploadReady,
             on_error=self._check_duet3_sbc,
         )
-
-    def _serializing_scene_to_gcode(self):
-        Logger.log("d", "Serializing gcode...")
-        gcode_writer = cast(MeshWriter, PluginRegistry.getInstance().getPluginObject("GCodeWriter"))
-        gcode_stream = StringIO()
-        success = gcode_writer.write(gcode_stream, None)
-        if not success:
-            Logger.log("e", "GCodeWriter failed.")
-            return None
-        return gcode_stream
-
-    def _assemble_final_gcode(self, gcode_stream, thumbnail_stream):
-        Logger.log("d", "Assembling final gcode file...")
-
-        final_stream = StringIO()
-        gcode_stream.seek(0)
-        for l in gcode_stream.readlines():
-            final_stream.write(l)
-            if l.startswith(";Generated with"):
-                version = DuetRRFSettings.get_plugin_version()
-                final_stream.write(f";Exported with Cura-DuetRRF v{version} plugin by Thomas Kriechbaumer\n")
-                final_stream.write(thumbnail_stream.getvalue())
-
-        return final_stream
 
     def _check_duet3_sbc(self, reply, error):
         Logger.log("d", "rr_connect failed with error " + str(error))

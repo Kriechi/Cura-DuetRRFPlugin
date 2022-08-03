@@ -1,3 +1,4 @@
+from io import StringIO
 import json
 
 try: # Cura 5
@@ -8,6 +9,7 @@ except: # Cura 4
 from cura.CuraApplication import CuraApplication
 from cura.Settings.CuraContainerRegistry import CuraContainerRegistry
 
+from UM.Application import Application
 from UM.Message import Message
 from UM.Logger import Logger
 from UM.Extension import Extension
@@ -17,8 +19,8 @@ from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
 from .DuetRRFOutputDevice import DuetRRFConfigureOutputDevice, DuetRRFOutputDevice, DuetRRFDeviceType
-from .DuetRRFSettings import delete_config, get_config, init_settings, DUETRRF_SETTINGS
-
+from .DuetRRFSettings import get_plugin_version, delete_config, get_config, init_settings, DUETRRF_SETTINGS
+from .thumbnails import generate_thumbnail
 
 class DuetRRFPlugin(Extension, OutputDevicePlugin):
     def __init__(self):
@@ -26,6 +28,7 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         self._application = CuraApplication.getInstance()
         self._application.globalContainerStackChanged.connect(self._checkDuetRRFOutputDevices)
         self._application.initializationFinished.connect(self._delay_check_unmapped_settings)
+        self._application.getOutputDeviceManager().writeStarted.connect(self._embed_thumbnails)
 
         init_settings()
 
@@ -38,6 +41,32 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
 
     def stop(self, store_data: bool = True):
         pass
+
+    def _embed_thumbnails(self, output_device) -> None:
+        # fetch sliced gcode from scene and active build plate
+        active_build_plate_id = self._application.getMultiBuildPlateModel().activeBuildPlate
+        scene = Application.getInstance().getController().getScene()
+        gcode_dict = getattr(scene, "gcode_dict", None)
+        if not gcode_dict:
+            return
+        gcode_list = gcode_dict[active_build_plate_id]
+        if not gcode_list:
+            return
+
+        if ";Exported with Cura-DuetRRF" not in gcode_list[0]:
+            # assemble everything and inject custom data
+            Logger.log("i", "Assembling final gcode file...")
+
+            version = get_plugin_version()
+            thumbnail_stream = generate_thumbnail()
+            gcode_list[0] += f";Exported with Cura-DuetRRF v{version} plugin by Thomas Kriechbaumer\n"
+            gcode_list[0] += thumbnail_stream.getvalue()
+
+            # store new gcode back into scene and active build plate
+            gcode_dict[active_build_plate_id] = gcode_list
+            setattr(scene, "gcode_dict", gcode_dict)
+        else:
+            Logger.log("e", "Already embedded thumbnails")
 
     def _delay_check_unmapped_settings(self):
         self._change_timer = QTimer()
