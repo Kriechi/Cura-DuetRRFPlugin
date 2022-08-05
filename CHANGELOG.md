@@ -1,7 +1,8 @@
 # Changelog of Cura-DuetRRFPlugin
 
-## v1.2.8: 2022-XX-XX
+## v1.2.8: 2022-08-15
 * also embed QOI thumbnail images when using "Save to Disk" option
+* fix window layout to fit content in Cura 5.1
 
 ## v1.2.7: 2022-04-26
 * bump compatibility for Cura 5.0 / API 8.0, while retaining compatibility with Cura 4.11 / 7.7 and up
