@@ -1,5 +1,10 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.10: 2024-01-20
+* fix HTTP Basic Auth
+* bump compatibility for Cura 5.6 / API 8.6
+* require Cura 5 API compatibility
+
 ## v1.2.9: 2022-10-19
 * bump compatibility for Cura 5.2 / API 8.2
 
