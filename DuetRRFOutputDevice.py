@@ -134,7 +134,7 @@ class DuetRRFOutputDevice(OutputDevice):
 
         if self._http_user and self._http_password:
             auth = "{}:{}".format(self._http_user, self._http_password).encode()
-            headers['Authorization'] = 'Basic ' + base64.b64encode(auth)
+            headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode()
 
         if data:
             headers['Content-Type'] = 'application/octet-stream'
