@@ -1,8 +1,8 @@
-# imported from https://github.com/pfusik/qoi-ci/blob/49b3dc16414ed14bd1600b97f7148b6af9e929ad/transpiled/QOI.py
+# imported from https://github.com/pfusik/qoi-fu/blob/4196ed1856a15c5ed7148044aaf72823cebc5d44/transpiled/QOI.py
 # This code is licensed under the standard MIT license.
-# Copyright (C) 2021 Piotr Fusik
+# Copyright (C) 2021-2024 Piotr Fusik
 
-# Generated automatically with "cito". Do not edit.
+# Generated automatically with "fut". Do not edit.
 import array
 
 class QOIEncoder:
@@ -10,17 +10,19 @@ class QOIEncoder:
 
 	Losslessly compresses an image to a byte array."""
 
-	_HEADER_SIZE = 14
-
-	_PADDING_SIZE = 8
-
 	def __init__(self):
 		"""Constructs the encoder.
 
 		The encoder can be used for several images, one after another."""
 
+	_HEADER_SIZE = 14
+
+	_PADDING_SIZE = 8
+	_encoded: bytearray | None
+	_encoded_size: int
+
 	@staticmethod
-	def can_encode(width, height, alpha):
+	def can_encode(width: int, height: int, alpha: bool) -> bool:
 		"""Determines if an image of given size can be encoded.
 
 		:param width: Image width in pixels.
@@ -29,21 +31,21 @@ class QOIEncoder:
 		"""
 		return width > 0 and height > 0 and height <= int(int(2147483625 / width) / (5 if alpha else 4))
 
-	def encode(self, width, height, pixels, alpha, linear_colorspace):
+	def encode(self, width: int, height: int, pixels: array.array, alpha: bool, linear_colorspace: bool) -> bool:
 		"""Encodes the given image.
 
-		Returns `true` if encoded successfully.
+		Returns `True` if encoded successfully.
 
 		:param width: Image width in pixels.
 		:param height: Image height in pixels.
 		:param pixels: Pixels of the image, top-down, left-to-right.
-		:param alpha: `false` specifies that all pixels are opaque. High bytes of `pixels` elements are ignored then.
+		:param alpha: `False` specifies that all pixels are opaque. High bytes of `pixels` elements are ignored then.
 		:param linear_colorspace: Specifies the color space.
 		"""
-		if pixels is None or not QOIEncoder.can_encode(width, height, alpha):
+		if not QOIEncoder.can_encode(width, height, alpha):
 			return False
-		pixels_size = width * height
-		encoded = bytearray(14 + pixels_size * (5 if alpha else 4) + 8)
+		pixels_size: int = width * height
+		encoded: bytearray = bytearray(14 + pixels_size * (5 if alpha else 4) + 8)
 		encoded[0] = 113
 		encoded[1] = 111
 		encoded[2] = 105
@@ -58,13 +60,13 @@ class QOIEncoder:
 		encoded[11] = height & 255
 		encoded[12] = 4 if alpha else 3
 		encoded[13] = 1 if linear_colorspace else 0
-		index = array.array("i", [ 0 ]) * 64
-		encoded_offset = 14
-		last_pixel = -16777216
-		run = 0
-		pixels_offset = 0
+		index: array.array = array.array("i", [ 0 ]) * 64
+		encoded_offset: int = 14
+		last_pixel: int = -16777216
+		run: int = 0
+		pixels_offset: int = 0
 		while pixels_offset < pixels_size:
-			pixel = pixels[pixels_offset]
+			pixel: int = pixels[pixels_offset]
 			pixels_offset += 1
 			if not alpha:
 				pixel |= -16777216
@@ -79,27 +81,26 @@ class QOIEncoder:
 					encoded[encoded_offset] = 191 + run
 					encoded_offset += 1
 					run = 0
-				index_offset = ((pixel >> 16) * 3 + (pixel >> 8) * 5 + (pixel & 63) * 7 + (pixel >> 24) * 11) & 63
+				index_offset: int = ((pixel >> 16) * 3 + (pixel >> 8) * 5 + (pixel & 63) * 7 + (pixel >> 24) * 11) & 63
 				if pixel == index[index_offset]:
 					encoded[encoded_offset] = index_offset
 					encoded_offset += 1
 				else:
 					index[index_offset] = pixel
-					r = pixel >> 16 & 255
-					g = pixel >> 8 & 255
-					b = pixel & 255
-					a = pixel >> 24 & 255
+					r: int = pixel >> 16 & 255
+					g: int = pixel >> 8 & 255
+					b: int = pixel & 255
 					if (pixel ^ last_pixel) >> 24 != 0:
 						encoded[encoded_offset] = 255
 						encoded[encoded_offset + 1] = r
 						encoded[encoded_offset + 2] = g
 						encoded[encoded_offset + 3] = b
-						encoded[encoded_offset + 4] = a
+						encoded[encoded_offset + 4] = pixel >> 24 & 255
 						encoded_offset += 5
 					else:
-						dr = r - (last_pixel >> 16 & 255)
-						dg = g - (last_pixel >> 8 & 255)
-						db = b - (last_pixel & 255)
+						dr: int = (((r - (last_pixel >> 16)) & 255) ^ 128) - 128
+						dg: int = (((g - (last_pixel >> 8)) & 255) ^ 128) - 128
+						db: int = (((b - last_pixel) & 255) ^ 128) - 128
 						if dr >= -2 and dr <= 1 and dg >= -2 and dg <= 1 and db >= -2 and db <= 1:
 							encoded[encoded_offset] = 106 + (dr << 4) + (dg << 2) + db
 							encoded_offset += 1
@@ -123,15 +124,15 @@ class QOIEncoder:
 		self._encoded_size = encoded_offset + 8
 		return True
 
-	def get_encoded(self):
+	def get_encoded(self) -> bytearray | bytes:
 		"""Returns the encoded file contents.
 
-		This method can only be called after `Encode` returned `true`.
+		This method can only be called after `Encode` returned `True`.
 		The allocated array is usually larger than the encoded data.
 		Call `GetEncodedSize` to retrieve the number of leading bytes that are significant."""
 		return self._encoded
 
-	def get_encoded_size(self):
+	def get_encoded_size(self) -> int:
 		"""Returns the encoded file length."""
 		return self._encoded_size
 
@@ -142,71 +143,80 @@ class QOIDecoder:
 		"""Constructs the decoder.
 
 		The decoder can be used for several images, one after another."""
+	_width: int
+	_height: int
+	_pixels: array.array | None
+	_alpha: bool
+	_linear_colorspace: bool
 
-	def decode(self, encoded, encoded_size):
+	def decode(self, encoded: bytearray | bytes, encoded_size: int) -> bool:
 		"""Decodes the given QOI file contents.
 
-		Returns `true` if decoded successfully.
+		Returns `True` if decoded successfully.
 
 		:param encoded: QOI file contents. Only the first `encodedSize` bytes are accessed.
 		:param encoded_size: QOI file length.
 		"""
-		if encoded is None or encoded_size < 23 or encoded[0] != 113 or encoded[1] != 111 or encoded[2] != 105 or encoded[3] != 102:
+		if encoded_size < 23 or encoded[0] != 113 or encoded[1] != 111 or encoded[2] != 105 or encoded[3] != 102:
 			return False
-		width = encoded[4] << 24 | encoded[5] << 16 | encoded[6] << 8 | encoded[7]
-		height = encoded[8] << 24 | encoded[9] << 16 | encoded[10] << 8 | encoded[11]
+		width: int = encoded[4] << 24 | encoded[5] << 16 | encoded[6] << 8 | encoded[7]
+		height: int = encoded[8] << 24 | encoded[9] << 16 | encoded[10] << 8 | encoded[11]
 		if width <= 0 or height <= 0 or height > int(2147483647 / width):
 			return False
-		if encoded[12] == 3:
-			self._alpha = False
-		elif encoded[12] == 4:
-			self._alpha = True
-		else:
-			return False
-		if encoded[13] == 0:
-			self._linear_colorspace = False
-		elif encoded[13] == 1:
-			self._linear_colorspace = True
-		else:
-			return False
-		pixels_size = width * height
-		pixels = array.array("i", [ 0 ]) * pixels_size
+		match encoded[12]:
+			case 3:
+				self._alpha = False
+			case 4:
+				self._alpha = True
+			case _:
+				return False
+		match encoded[13]:
+			case 0:
+				self._linear_colorspace = False
+			case 1:
+				self._linear_colorspace = True
+			case _:
+				return False
+		pixels_size: int = width * height
+		pixels: array.array = array.array("i", [ 0 ]) * pixels_size
 		encoded_size -= 8
-		encoded_offset = 14
-		index = array.array("i", [ 0 ]) * 64
-		pixel = -16777216
-		pixels_offset = 0
+		encoded_offset: int = 14
+		index: array.array = array.array("i", [ 0 ]) * 64
+		pixel: int = -16777216
+		pixels_offset: int = 0
 		while pixels_offset < pixels_size:
 			if encoded_offset >= encoded_size:
 				return False
-			e = encoded[encoded_offset]
+			e: int = encoded[encoded_offset]
 			encoded_offset += 1
-			ci_switch_tmp = e >> 6
-			if ci_switch_tmp == 0:
-				pixels[pixels_offset] = pixel = index[e]
-				pixels_offset += 1
-				continue
-			elif ci_switch_tmp == 1:
-				pixel = (pixel & -16777216) | ((pixel + (((e >> 4) - 4 - 2) << 16)) & 16711680) | ((pixel + (((e >> 2 & 3) - 2) << 8)) & 65280) | ((pixel + (e & 3) - 2) & 255)
-			elif ci_switch_tmp == 2:
-				e -= 160
-				rb = encoded[encoded_offset]
-				encoded_offset += 1
-				pixel = (pixel & -16777216) | ((pixel + ((e + (rb >> 4) - 8) << 16)) & 16711680) | ((pixel + (e << 8)) & 65280) | ((pixel + e + (rb & 15) - 8) & 255)
-			else:
-				if e < 254:
-					e -= 191
-					if pixels_offset + e > pixels_size:
-						return False
-					pixels[pixels_offset:pixels_offset + e] = array.array("i", [ pixel ]) * e
-					pixels_offset += e
+			match e >> 6:
+				case 0:
+					pixels[pixels_offset] = pixel = index[e]
+					pixels_offset += 1
 					continue
-				if e == 254:
-					pixel = (pixel & -16777216) | encoded[encoded_offset] << 16 | encoded[encoded_offset + 1] << 8 | encoded[encoded_offset + 2]
-					encoded_offset += 3
-				else:
-					pixel = encoded[encoded_offset + 3] << 24 | encoded[encoded_offset] << 16 | encoded[encoded_offset + 1] << 8 | encoded[encoded_offset + 2]
-					encoded_offset += 4
+				case 1:
+					pixel = (pixel & -16777216) | ((pixel + (((e >> 4) - 4 - 2) << 16)) & 16711680) | ((pixel + (((e >> 2 & 3) - 2) << 8)) & 65280) | ((pixel + (e & 3) - 2) & 255)
+				case 2:
+					e -= 160
+					rb: int = encoded[encoded_offset]
+					encoded_offset += 1
+					pixel = (pixel & -16777216) | ((pixel + ((e + (rb >> 4) - 8) << 16)) & 16711680) | ((pixel + (e << 8)) & 65280) | ((pixel + e + (rb & 15) - 8) & 255)
+				case _:
+					if e < 254:
+						e -= 191
+						if pixels_offset + e > pixels_size:
+							return False
+						if pixels_offset == 0:
+							index[53] = pixel
+						pixels[pixels_offset:pixels_offset + e] = array.array("i", [ pixel ]) * e
+						pixels_offset += e
+						continue
+					if e == 254:
+						pixel = (pixel & -16777216) | encoded[encoded_offset] << 16 | encoded[encoded_offset + 1] << 8 | encoded[encoded_offset + 2]
+						encoded_offset += 3
+					else:
+						pixel = encoded[encoded_offset + 3] << 24 | encoded[encoded_offset] << 16 | encoded[encoded_offset + 1] << 8 | encoded[encoded_offset + 2]
+						encoded_offset += 4
 			pixels[pixels_offset] = index[((pixel >> 16) * 3 + (pixel >> 8) * 5 + (pixel & 63) * 7 + (pixel >> 24) * 11) & 63] = pixel
 			pixels_offset += 1
 		if encoded_offset != encoded_size:
@@ -216,26 +226,27 @@ class QOIDecoder:
 		self._pixels = pixels
 		return True
 
-	def get_width(self):
+	def get_width(self) -> int:
 		"""Returns the width of the decoded image in pixels."""
 		return self._width
 
-	def get_height(self):
+	def get_height(self) -> int:
 		"""Returns the height of the decoded image in pixels."""
 		return self._height
 
-	def get_pixels(self):
+	def get_pixels(self) -> array.array:
 		"""Returns the pixels of the decoded image, top-down, left-to-right.
 
 		Each pixel is a 32-bit integer 0xAARRGGBB."""
 		return self._pixels
 
-	def has_alpha(self):
+	def has_alpha(self) -> bool:
 		"""Returns the information about the alpha channel from the file header."""
 		return self._alpha
 
-	def is_linear_colorspace(self):
+	def is_linear_colorspace(self) -> bool:
 		"""Returns the color space information from the file header.
 
-		`false` = sRGB with linear alpha channel.`true` = all channels linear."""
+		`False` = sRGB with linear alpha channel.
+		`True` = all channels linear."""
 		return self._linear_colorspace
