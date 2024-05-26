@@ -17,7 +17,7 @@ from UM.Settings.DefinitionContainer import DefinitionContainer
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
-from .DuetRRFSettings import delete_config, get_config, save_config
+from .DuetRRFSettings import DEFAULT_THUMBNAIL_SIZES_STR, delete_config, get_config, save_config
 
 
 class DuetRRFAction(MachineAction):
@@ -38,6 +38,8 @@ class DuetRRFAction(MachineAction):
         self.printerSettingsDuetPasswordChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
+        self.printerSettingsEmbedThumbnailsChanged.emit()
+        self.printerSettingsThumbnailSizesChanged.emit()
 
     def _onContainerAdded(self, container: "ContainerInterface") -> None:
         # Add this action as a supported action to all machine definitions
@@ -53,11 +55,16 @@ class DuetRRFAction(MachineAction):
         self.printerSettingsDuetPasswordChanged.emit()
         self.printerSettingsHTTPUserChanged.emit()
         self.printerSettingsHTTPPasswordChanged.emit()
+        self.printerSettingsEmbedThumbnailsChanged.emit()
+        self.printerSettingsThumbnailSizesChanged.emit()
+
 
     printerSettingsUrlChanged = pyqtSignal()
     printerSettingsDuetPasswordChanged = pyqtSignal()
     printerSettingsHTTPUserChanged = pyqtSignal()
     printerSettingsHTTPPasswordChanged = pyqtSignal()
+    printerSettingsEmbedThumbnailsChanged = pyqtSignal()
+    printerSettingsThumbnailSizesChanged = pyqtSignal()
 
     @pyqtProperty(str, notify=printerSettingsUrlChanged)
     def printerSettingUrl(self) -> Optional[str]:
@@ -87,12 +94,27 @@ class DuetRRFAction(MachineAction):
             return s["http_password"]
         return ""
 
-    @pyqtSlot(str, str, str, str)
-    def saveConfig(self, url, duet_password, http_user, http_password):
+    @pyqtProperty(bool, notify=printerSettingsEmbedThumbnailsChanged)
+    def printerSettingEmbedThumbnails(self) -> Optional[bool]:
+        s = get_config()
+        if s:
+            return s["embed_thumbnails"]
+        return True
+
+    @pyqtProperty(str, notify=printerSettingsThumbnailSizesChanged)
+    def printerSettingThumbnailSizes(self) -> Optional[str]:
+        s = get_config()
+        if s:
+            return s["thumbnail_sizes"]
+        return DEFAULT_THUMBNAIL_SIZES_STR
+
+    @pyqtSlot(str, str, str, str, bool, str)
+    def saveConfig(self, url, duet_password, http_user, http_password, embed_thumbnails, thumbnail_sizes):
         if not url.endswith('/'):
             url += '/'
 
-        save_config(url, duet_password, http_user, http_password)
+        Logger.log("d", f"saving config: {url=}, {duet_password=}, {http_user=}, {http_password=}, {embed_thumbnails=}, {thumbnail_sizes=}")
+        save_config(url, duet_password, http_user, http_password, embed_thumbnails, thumbnail_sizes)
         Logger.log("d", "config saved")
 
         # trigger a stack change to reload the output devices

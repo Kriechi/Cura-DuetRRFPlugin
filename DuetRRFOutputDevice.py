@@ -4,8 +4,6 @@ import datetime
 import urllib
 import json
 import base64
-from io import StringIO
-from typing import cast
 from enum import Enum
 
 try: # Cura 5
@@ -27,7 +25,6 @@ from UM.OutputDevice import OutputDeviceError
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
 
-from . import DuetRRFSettings
 from .helpers import serializing_scene_to_gcode
 
 class OutputStage(Enum):
@@ -66,14 +63,14 @@ class DuetRRFConfigureOutputDevice(OutputDevice):
 
 
 class DuetRRFOutputDevice(OutputDevice):
-    def __init__(self, settings, device_type):
+    def __init__(self, config, device_type):
         self._name_id = "duetrrf-{}".format(device_type.name)
         super().__init__(self._name_id)
 
-        self._url = settings["url"]
-        self._duet_password = settings["duet_password"]
-        self._http_user = settings["http_user"]
-        self._http_password = settings["http_password"]
+        self._url = config["url"]
+        self._duet_password = config["duet_password"]
+        self._http_user = config["http_user"]
+        self._http_password = config["http_password"]
 
         self.application = CuraApplication.getInstance()
         global_container_stack = self.application.getGlobalContainerStack()
@@ -301,7 +298,7 @@ class DuetRRFOutputDevice(OutputDevice):
             self._message.show()
 
             gcode='M37 P"0:/gcodes/' + self._fileName + '"'
-            Logger.log("d", "Sending gcode:" + gcode)
+            Logger.log("d", "Sending gcode: " + gcode)
             if self._use_rrf_http_api:
                 self._send('rr_gcode',
                     query=[("gcode", gcode)],
@@ -340,7 +337,7 @@ class DuetRRFOutputDevice(OutputDevice):
         Logger.log("d", "Ready to print")
 
         gcode = 'M32 "0:/gcodes/' + self._fileName + '"'
-        Logger.log("d", "Sending gcode:" + gcode)
+        Logger.log("d", "Sending gcode: " + gcode)
         if self._use_rrf_http_api:
             self._send('rr_gcode',
                 query=[("gcode", gcode)],

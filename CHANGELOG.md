@@ -1,5 +1,10 @@
 # Changelog of Cura-DuetRRFPlugin
 
+## v1.2.11: 2024-06-15
+* potential fix for thumbnail generation on Cura 5.7+ on unsupported Linux distros
+* allow disabling of thumbnail embedding (disabled by default for non-Duet-RRF printers)
+* allow custom thumbnail sizes, defaulting to 48x48, 240x240, 320x320
+
 ## v1.2.10: 2024-01-20
 * fix HTTP Basic Auth
 * bump compatibility for Cura 5.6 / API 8.6

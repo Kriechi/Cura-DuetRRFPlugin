@@ -43,6 +43,10 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         pass
 
     def _embed_thumbnails(self, output_device) -> None:
+        if not get_config().get("embed_thumbnails", False):
+            Logger.log("d", f"Skipping disabled thumbnail embedding or not a Duet-RRF printer.")
+            return
+
         # fetch sliced gcode from scene and active build plate
         active_build_plate_id = self._application.getMultiBuildPlateModel().activeBuildPlate
         scene = Application.getInstance().getController().getScene()
@@ -181,15 +185,12 @@ class DuetRRFPlugin(Extension, OutputDevicePlugin):
         manager.removeOutputDevice("duetrrf-upload")
 
         # check and load new output devices
-        s = get_config()
-        if s:
-            Logger.log("d", "DuetRRF is active for printer: id:{}, name:{}".format(
-                global_container_stack.getId(),
-                global_container_stack.getName(),
-            ))
-            manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.print))
-            manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.simulate))
-            manager.addOutputDevice(DuetRRFOutputDevice(s, DuetRRFDeviceType.upload))
+        config = get_config()
+        if config:
+            Logger.log("d", f"DuetRRF is active for printer: id:{global_container_stack.getId()}, name:{global_container_stack.getName(),}, config:{config}")
+            manager.addOutputDevice(DuetRRFOutputDevice(config, DuetRRFDeviceType.print))
+            manager.addOutputDevice(DuetRRFOutputDevice(config, DuetRRFDeviceType.simulate))
+            manager.addOutputDevice(DuetRRFOutputDevice(config, DuetRRFDeviceType.upload))
         else:
             manager.addOutputDevice(DuetRRFConfigureOutputDevice())
             Logger.log("d", "DuetRRF is not available for printer: id:{}, name:{}".format(
