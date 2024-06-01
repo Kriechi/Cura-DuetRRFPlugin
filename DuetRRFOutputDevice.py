@@ -16,6 +16,7 @@ except: # Cura 4
     from PyQt5.QtGui import QDesktopServices
 
 from cura.CuraApplication import CuraApplication
+from cura.Utils.Threading import call_on_qt_thread
 
 from UM.Application import Application
 from UM.Logger import Logger
@@ -161,6 +162,8 @@ class DuetRRFOutputDevice(OutputDevice):
                 error_callback=on_error if on_error else self._onNetworkError,
             )
 
+    # call on qt thread to get OpenGL to render the snapshot
+    @call_on_qt_thread
     def requestWrite(self, node, fileName=None, *args, **kwargs):
         if self._stage != OutputStage.ready:
             raise OutputDeviceError.DeviceBusyError()
