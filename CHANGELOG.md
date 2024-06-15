@@ -4,6 +4,7 @@
 * potential fix for thumbnail generation on Cura 5.7+ on unsupported Linux distros
 * allow disabling of thumbnail embedding (disabled by default for non-Duet-RRF printers)
 * allow custom thumbnail sizes, defaulting to 48x48, 240x240, 320x320
+* bump compatibility for Cura 5.7 / API 8.7
 
 ## v1.2.10: 2024-01-20
 * fix HTTP Basic Auth

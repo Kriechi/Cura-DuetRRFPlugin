@@ -2,7 +2,7 @@
     "name": "DuetRRF",
     "author": "Thomas Kriechbaumer",
     "description": "Upload and Print to Duet 2 Wifi / Duet 2 Ethernet / Duet 2 Maestro / Duet 3 with RepRapFirmware.",
-    "version": "1.2.10",
+    "version": "1.2.11",
     "api": 8,
-    "supported_sdk_versions": ["8.0.0", "8.1.0", "8.2.0", "8.3.0", "8.4.0", "8.5.0", "8.6.0"]
+    "supported_sdk_versions": ["8.0.0", "8.1.0", "8.2.0", "8.3.0", "8.4.0", "8.5.0", "8.6.0", "8.7.0"]
 }
